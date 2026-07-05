@@ -53,7 +53,7 @@ async function tryResumePendingQuestion(threadTs: string, answerText: string, sa
 
   resolvePendingQuestion(pending.id, answerText);
   try {
-    const outcome = await resumePendingRow(pending, app.client);
+    const outcome = await resumePendingRow(pending, answerText, app.client);
     if (!outcome) {
       await say({ text: `Thanks — but that Staging row isn't Approved anymore, so I'm leaving it alone.`, thread_ts: threadTs });
       return true;

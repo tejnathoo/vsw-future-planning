@@ -128,9 +128,20 @@ export async function runPromotionAgent(
  * fresh bounded loop for it, now equipped with Tej's answer. Posts the outcome
  * directly to the same thread; v1 doesn't create a separate Notion row for a
  * resumed single item (the original run's page body already shows it was held).
+ *
+ * `answer` is taken as an explicit parameter rather than read off `pending.answer`
+ * — bug fixed 2026-07-05: the caller (index.ts) fetches `pending` via
+ * `findUnresolvedByThread` BEFORE calling `resolvePendingQuestion`, so that
+ * in-memory object's `answer` field is always stale/undefined by the time it
+ * gets here. Passing the just-typed reply text directly sidesteps the
+ * stale-object problem entirely. Live impact: a real resume run appended an
+ * org as net-new and reported "Tej gave no clarifying answer" in its own
+ * summary — technically true from the model's point of view, since it was
+ * handed an empty string even though Tej had just replied with real guidance.
  */
 export async function resumePendingRow(
   pending: PendingQuestion,
+  answer: string,
   slackClient: SlackClient
 ): Promise<RowOutcome | null> {
   const staging = await readStagingApprovedRows();
@@ -140,6 +151,6 @@ export async function resumePendingRow(
   return runRowAgent(
     row,
     { organization: row.organization, stagingRowNumber: row.rowNumber, channel: pending.channel, threadTs: pending.threadTs, slackClient },
-    { question: pending.question, answer: pending.answer || "" }
+    { question: pending.question, answer }
   );
 }
