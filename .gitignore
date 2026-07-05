@@ -1,0 +1,51 @@
+# === Secrets — NEVER commit ===
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+# Local credential hand-off notes (fill these in locally; never tracked)
+*.local.md
+credentials.local.md
+CREDENTIALS.local.md
+# Google service-account / OAuth credential files
+service-account.json
+google-credentials*.json
+client_secret*.json
+gcp-*.json
+token.json
+
+# === Node / TypeScript ===
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+coverage/
+.npm/
+
+# === Logs ===
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# === Runtime / tmp ===
+tmp/
+.tmp/
+*.pid
+
+# === OS / editor ===
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# === Local Claude harness settings (keep out of shared repo) ===
+.claude/settings.local.json
+
+# === Promotion Agent runtime state (not decision memory — see src/promote/source-type-cache.json, which IS committed) ===
+state/*.json
+!state/.gitkeep
