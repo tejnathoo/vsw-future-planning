@@ -17,6 +17,16 @@ export interface RowOutcome {
   tokensUsed: number;
   firecrawlCalls: number;
   transcript: string[];
+  /**
+   * Whether `ask_tej_on_slack` was actually called during this row (PLAN Stage
+   * 7 bug fix, 2026-07-05) — `outcome: "held"` is self-reported by the model in
+   * its final JSON and was never actually gated on having asked anything, so a
+   * row could go "held" with nothing ever posted to Slack and no pending
+   * question created, silently breaking the run summary's "I'll follow up
+   * in-thread" promise. Callers (runAgent.ts) use this to be honest about
+   * which held rows actually have a question waiting on a reply.
+   */
+  askCalled: boolean;
 }
 
 function rowContext(row: StagingApprovedRow, priorAnswer?: { question: string; answer: string }): string {
@@ -76,6 +86,8 @@ export async function runRowAgent(
   let masterWriteSucceeded = false;
   let flipCalled = false;
   let flipGraceUsed = false;
+  let askCalled = false;
+  let heldWithoutAskingNudgeUsed = false;
   const startedAt = Date.now();
 
   for (let iteration = 0; iteration < MAX_LOOP_ITERATIONS; iteration++) {
@@ -94,10 +106,10 @@ export async function runRowAgent(
         flipGraceUsed = true;
       } else if (masterWriteSucceeded) {
         transcript.push("budget exceeded after a successful write, but flip_staging_review_status was never called");
-        return { organization: row.organization, stagingRowNumber: row.rowNumber, outcome: "failed", detail: "Wrote to master-prospects but ran out of budget before flipping this Staging row's Review Status — check it manually before re-running promote, or it may be promoted twice.", tokensUsed, firecrawlCalls: toolCtx.usage.firecrawlCalls, transcript };
+        return { organization: row.organization, stagingRowNumber: row.rowNumber, outcome: "failed", detail: "Wrote to master-prospects but ran out of budget before flipping this Staging row's Review Status — check it manually before re-running promote, or it may be promoted twice.", tokensUsed, firecrawlCalls: toolCtx.usage.firecrawlCalls, transcript, askCalled };
       } else {
         transcript.push(`budget exceeded (${toolCallCount} tool calls, ${elapsed}ms) with no write yet — holding this row`);
-        return { organization: row.organization, stagingRowNumber: row.rowNumber, outcome: "held", detail: "Hit the tool-call/time budget before reaching a confident decision.", tokensUsed, firecrawlCalls: toolCtx.usage.firecrawlCalls, transcript };
+        return { organization: row.organization, stagingRowNumber: row.rowNumber, outcome: "held", detail: "Hit the tool-call/time budget before reaching a confident decision.", tokensUsed, firecrawlCalls: toolCtx.usage.firecrawlCalls, transcript, askCalled };
       }
     }
 
@@ -116,10 +128,30 @@ export async function runRowAgent(
       transcript.push(`final: ${finalText}`);
       try {
         const parsed = parseStrictJson<{ outcome: RowOutcome["outcome"]; detail: string }>(finalText);
+
+        // Structural guard, not just a prompt request (PLAN Stage 7 bug fix,
+        // 2026-07-05): "held" is self-reported by the model and was never
+        // actually gated on having asked Tej anything — a row could go held
+        // with nothing posted to Slack and no pending question created,
+        // silently breaking the run summary's "I'll follow up in-thread"
+        // promise. Give it exactly one chance to actually ask (or reconsider)
+        // before accepting a silent hold as terminal.
+        if (parsed.outcome === "held" && !askCalled && !heldWithoutAskingNudgeUsed) {
+          heldWithoutAskingNudgeUsed = true;
+          transcript.push(`model reported "held" without ever calling ask_tej_on_slack — nudging it to actually ask or reconsider`);
+          messages.push({ role: "assistant", content: response.content });
+          messages.push({
+            role: "user",
+            content:
+              "You reported outcome \"held\" but never called ask_tej_on_slack, so nothing was actually communicated. If you're unsure, call ask_tej_on_slack with your specific question now. If you can decide confidently instead, do that.",
+          });
+          continue;
+        }
+
         console.log(`[promotion agent] ${row.organization} (row ${row.rowNumber}) -> ${parsed.outcome}: ${parsed.detail}`);
-        return { organization: row.organization, stagingRowNumber: row.rowNumber, outcome: parsed.outcome, detail: parsed.detail, tokensUsed, firecrawlCalls: toolCtx.usage.firecrawlCalls, transcript };
+        return { organization: row.organization, stagingRowNumber: row.rowNumber, outcome: parsed.outcome, detail: parsed.detail, tokensUsed, firecrawlCalls: toolCtx.usage.firecrawlCalls, transcript, askCalled };
       } catch {
-        return { organization: row.organization, stagingRowNumber: row.rowNumber, outcome: "failed", detail: `Model's final answer wasn't valid JSON: ${finalText.slice(0, 200)}`, tokensUsed, firecrawlCalls: toolCtx.usage.firecrawlCalls, transcript };
+        return { organization: row.organization, stagingRowNumber: row.rowNumber, outcome: "failed", detail: `Model's final answer wasn't valid JSON: ${finalText.slice(0, 200)}`, tokensUsed, firecrawlCalls: toolCtx.usage.firecrawlCalls, transcript, askCalled };
       }
     }
 
@@ -144,6 +176,7 @@ export async function runRowAgent(
         const result = await def.handler(block.input, toolCtx);
         if (block.name === "append_master_row" || block.name === "update_master_aggregate_row") masterWriteSucceeded = true;
         if (block.name === "flip_staging_review_status") flipCalled = true;
+        if (block.name === "ask_tej_on_slack") askCalled = true;
         console.log(`[promotion agent] ${row.organization}: ${block.name}(${JSON.stringify(block.input).slice(0, 200)}) -> ${JSON.stringify(result).slice(0, 200)}`);
         transcript.push(`tool: ${block.name}(${JSON.stringify(block.input)}) -> ${JSON.stringify(result).slice(0, 300)}`);
         toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
@@ -160,5 +193,5 @@ export async function runRowAgent(
   const detail = masterWriteSucceeded && !flipCalled
     ? "Wrote to master-prospects but hit the loop's absolute iteration cap before flipping this Staging row's Review Status — check it manually before re-running promote, or it may be promoted twice."
     : "Hit the loop's absolute iteration cap without reaching a final answer.";
-  return { organization: row.organization, stagingRowNumber: row.rowNumber, outcome: "failed", detail, tokensUsed, firecrawlCalls: toolCtx.usage.firecrawlCalls, transcript };
+  return { organization: row.organization, stagingRowNumber: row.rowNumber, outcome: "failed", detail, tokensUsed, firecrawlCalls: toolCtx.usage.firecrawlCalls, transcript, askCalled };
 }

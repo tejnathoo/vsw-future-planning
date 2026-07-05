@@ -27,4 +27,8 @@ describe("buildSystemPrompt — the rules live in context, not external branchin
     expect(prompt.toLowerCase()).toMatch(/ask_tej_on_slack/);
     expect(prompt.toLowerCase()).toMatch(/firecrawl/);
   });
+
+  it("tells the model not to report 'held' without actually asking Tej something (bug fix 2026-07-05)", () => {
+    expect(prompt.toLowerCase()).toMatch(/always call ask_tej_on_slack first/);
+  });
 });

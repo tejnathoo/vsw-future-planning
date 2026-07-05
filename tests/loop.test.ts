@@ -10,12 +10,14 @@ vi.mock("../src/anthropicClient", async (importOriginal) => {
 const noopHandler = vi.fn().mockResolvedValue({ ok: true });
 const appendHandler = vi.fn().mockResolvedValue({ rowNumber: 999 });
 const flipHandler = vi.fn().mockResolvedValue({ ok: true });
+const askHandler = vi.fn().mockResolvedValue({ answered: false });
 
 vi.mock("../src/promote/agent/tools", () => ({
   TOOLS: [
     { name: "noop_tool", description: "d", input_schema: { type: "object", properties: {} }, handler: noopHandler },
     { name: "append_master_row", description: "d", input_schema: { type: "object", properties: {} }, handler: appendHandler },
     { name: "flip_staging_review_status", description: "d", input_schema: { type: "object", properties: {} }, handler: flipHandler },
+    { name: "ask_tej_on_slack", description: "d", input_schema: { type: "object", properties: {} }, handler: askHandler },
   ],
 }));
 
@@ -44,6 +46,7 @@ beforeEach(() => {
   noopHandler.mockClear();
   appendHandler.mockClear();
   flipHandler.mockClear();
+  askHandler.mockClear();
 });
 
 describe("runRowAgent — the normal path", () => {
@@ -57,6 +60,7 @@ describe("runRowAgent — the normal path", () => {
     expect(result.detail).toBe("New Master row created.");
     expect(noopHandler).toHaveBeenCalledTimes(1);
     expect(result.tokensUsed).toBe(30);
+    expect(result.askCalled).toBe(false);
   });
 
   it("treats a non-JSON final answer as failed rather than guessing", async () => {
@@ -64,6 +68,42 @@ describe("runRowAgent — the normal path", () => {
     const result = await runRowAgent(row(), baseCtx as any);
     expect(result.outcome).toBe("failed");
     expect(result.detail).toMatch(/valid JSON/);
+  });
+});
+
+describe("runRowAgent — 'held' requires actually asking (bug fix 2026-07-05)", () => {
+  it("nudges the model instead of accepting a silent 'held' with no ask_tej_on_slack call", async () => {
+    anthropicMocks.create
+      .mockResolvedValueOnce(finalResponse("held", "Not sure about this one."))
+      .mockResolvedValueOnce(toolUseResponse("ask_tej_on_slack", "t1", { question: "Is this a duplicate?" }))
+      .mockResolvedValueOnce(finalResponse("held", "Asked Tej, waiting on a reply."));
+
+    const result = await runRowAgent(row(), baseCtx as any);
+    expect(askHandler).toHaveBeenCalledTimes(1);
+    expect(result.outcome).toBe("held");
+    expect(result.askCalled).toBe(true);
+  });
+
+  it("accepts a second silent 'held' rather than nudging forever", async () => {
+    anthropicMocks.create
+      .mockResolvedValueOnce(finalResponse("held", "Not sure about this one."))
+      .mockResolvedValueOnce(finalResponse("held", "Still not sure, not asking."));
+
+    const result = await runRowAgent(row(), baseCtx as any);
+    expect(askHandler).not.toHaveBeenCalled();
+    expect(result.outcome).toBe("held");
+    expect(result.askCalled).toBe(false);
+  });
+
+  it("accepts 'held' immediately if ask_tej_on_slack was already called earlier in the row", async () => {
+    anthropicMocks.create
+      .mockResolvedValueOnce(toolUseResponse("ask_tej_on_slack", "t1", { question: "Which Source Type?" }))
+      .mockResolvedValueOnce(finalResponse("held", "Asked Tej, waiting on a reply."));
+
+    const result = await runRowAgent(row(), baseCtx as any);
+    expect(askHandler).toHaveBeenCalledTimes(1);
+    expect(result.outcome).toBe("held");
+    expect(result.askCalled).toBe(true);
   });
 });
 

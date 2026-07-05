@@ -103,9 +103,20 @@ export async function runPromotionAgent(
     console.error("[promotion agent] Notion run log failed:", e.message);
   }
 
+  const heldRows = outcomes.filter((o) => o.outcome === "held");
+  // Bug fixed 2026-07-05: this bullet used to unconditionally claim "I'll
+  // follow up in-thread" for every held row, even when the model went held
+  // without ever actually calling ask_tej_on_slack (budget exceeded, or its
+  // own choice) — so nothing was ever asked, and Tej had no way to tell from
+  // the summary which org that even was. Now split by whether a question was
+  // actually asked, and both groups are named below rather than just counted.
+  const heldAsked = heldRows.filter((o) => o.askCalled);
+  const heldSilently = heldRows.filter((o) => !o.askCalled);
+
   const bullets = [`${added} added to Master`, `${merged} merged into existing`];
   if (skippedReview.length > 0) bullets.push(`${skippedReview.length} skipped (need you to confirm the match)`);
-  if (held > 0) bullets.push(`${held} held (I need more info or your OK — I'll follow up in-thread)`);
+  if (heldAsked.length > 0) bullets.push(`${heldAsked.length} held — I asked in-thread, reply whenever`);
+  if (heldSilently.length > 0) bullets.push(`${heldSilently.length} held — no question asked, see below`);
   if (failed > 0) bullets.push(`${failed} failed`);
 
   const links = [`📋 <${masterSheetLink()}|Open Master Prospects>`];
@@ -113,9 +124,13 @@ export async function runPromotionAgent(
   const contextText = `Engine: Promotion Agent  •  ${links.join("  •  ")}`;
 
   const failures = outcomes.filter((o) => o.outcome === "failed");
-  const extraSections = failures.length > 0
-    ? [`These didn't go through:\n${failures.map((f) => `• ${f.organization}: ${f.detail}`).join("\n")}`]
-    : [];
+  const extraSections: string[] = [];
+  if (heldRows.length > 0) {
+    extraSections.push(`Held:\n${heldRows.map((h) => `• ${h.organization}: ${h.detail}`).join("\n")}`);
+  }
+  if (failures.length > 0) {
+    extraSections.push(`These didn't go through:\n${failures.map((f) => `• ${f.organization}: ${f.detail}`).join("\n")}`);
+  }
 
   const message = bulletMessage("Promotion run done!", bullets, contextText, extraSections);
   return { message, notionUrl };
