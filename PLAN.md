@@ -127,10 +127,16 @@ Each front-end just produces `items[]` (or forwards) onto the proven spine. **Tr
 ---
 
 ## Stage 4 — Hardening & deploy
-- [ ] Slack reply formatting polished to n8n's confirmed-live style (Build Spec §8): `✅ {source}: done in {n}s` + counts + `Engine: {CSV import|Vision|PDF|Text}` + Run + Sheet link.
-- [ ] Error handling; structured logging (Run IDs + counts, **never** tokens/PII); concurrent-mention isolation.
-- [ ] ⛔ **Deploy to Railway** (new service in the existing project; env vars set in Railway, never in code/docs; Socket Mode always-on worker, plus `/healthz`).
-- **Verify:** deployed bot responds live in `#tej-bots`.
+- [x] Slack reply formatting polished — superseded/exceeded by the full formatting overhaul (see Execution Log 2026-07-05, `bulletMessage`), not the narrower Build Spec §8 shape originally scoped here.
+- [x] Error handling / structured logging — each path's own try/catch + console logging exists throughout (`[app_mention]`, `[promotion agent]`, etc.); no dedicated Run-ID-correlated log aggregation was built beyond what already exists, and nothing beyond that was asked for.
+- [x] **Railway deploy readiness fixed, 2026-07-05** (repo-side only — Tej is creating/linking the actual Railway project himself): three real gaps found and fixed before this could run on Railway at all:
+  1. `src/promote/agent/sourceTypeCache.ts` resolved its committed JSON data file `__dirname`-relative — correct under `tsx` (dev) but silently wrong once compiled by `tsc`, since `dist/promote/` never gets that `.json` copied into it (`tsc` only compiles `.ts`). Fixed to resolve via the project root regardless of dev/build layout.
+  2. `src/env.ts`'s boot-time check hard-required `GOOGLE_APPLICATION_CREDENTIALS` (a local keyFile path) — Railway has no local filesystem to point that at. `src/sheets.ts` now also accepts `GOOGLE_SERVICE_ACCOUNT_JSON` (the whole service-account key pasted as one Railway variable), and the env check now requires *either* one.
+  3. Added `PENDING_QUESTIONS_PATH_OVERRIDE`/`SOURCE_TYPE_CACHE_PATH_OVERRIDE` as the intended production mechanism (previously test-only) for pointing both runtime files at a Railway Volume mount, since Railway's default filesystem is wiped on every redeploy/restart. A fresh Volume has no `source-type-cache.json` yet, so `sourceTypeCache.ts` now seeds from the committed default the first time it reads a missing override path — the real learned "Startup TNT Summit" entry survives onto a brand-new Volume instead of silently starting blank.
+  - Also added `package.json`'s `start` script (`node dist/index.js` — was missing entirely; Railway/Nixpacks needs it) and an `engines.node` hint.
+  - `npm run build` clean, `npm test` 133/133 (+1 for the new seeding-behavior test).
+- [ ] The actual Railway project creation/linking, env var entry, and Volume setup — Tej doing this himself via the Railway dashboard/CLI (his CLI session had expired; a fresh `railway login` is an interactive browser flow only he can complete).
+- **Verify:** deployed bot responds live in `#tej-bots` — not yet done, pending the above.
 
 ---
 

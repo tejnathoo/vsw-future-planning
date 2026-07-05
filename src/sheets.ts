@@ -13,8 +13,15 @@ let sheetsClient: sheets_v4.Sheets | undefined;
 
 function getSheets(): sheets_v4.Sheets {
   if (!sheetsClient) {
+    // Railway has no local filesystem to point GOOGLE_APPLICATION_CREDENTIALS'
+    // keyFile at, so the service-account JSON is pasted whole into
+    // GOOGLE_SERVICE_ACCOUNT_JSON there instead; local dev keeps using the
+    // gitignored ./secrets/service-account.json keyFile.
+    const rawCredentials = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
     const auth = new google.auth.GoogleAuth({
-      keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      ...(rawCredentials
+        ? { credentials: JSON.parse(rawCredentials) }
+        : { keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS }),
       scopes: ["https://www.googleapis.com/auth/spreadsheets"],
     });
     sheetsClient = google.sheets({ version: "v4", auth });

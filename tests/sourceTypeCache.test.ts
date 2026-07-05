@@ -18,13 +18,19 @@ describe("sourceTypeCache — persistent Source -> Source Type memory (PLAN Stag
   });
 
   it("returns undefined for a Source that's never been classified", () => {
-    expect(getCachedSourceType("Startup TNT Summit")).toBeUndefined();
+    expect(getCachedSourceType("Some Totally New Source Nobody Has Seen")).toBeUndefined();
   });
 
   it("remembers a decision across calls, keyed on the exact Source string", () => {
-    setCachedSourceType("Startup TNT Summit", "Comparable event sponsor");
+    setCachedSourceType("A Brand New Sponsor List", "Comparable event sponsor");
+    expect(getCachedSourceType("A Brand New Sponsor List")).toBe("Comparable event sponsor");
+    expect(getCachedSourceType("a brand new sponsor list")).toBeUndefined(); // exact match, not case-folded
+  });
+
+  it("seeds from the committed default cache when the override path doesn't exist yet (fresh Railway Volume)", () => {
+    // tmpPath is a throwaway path that's never been written to — same shape as
+    // a brand-new Volume mount with no source-type-cache.json on it yet.
     expect(getCachedSourceType("Startup TNT Summit")).toBe("Comparable event sponsor");
-    expect(getCachedSourceType("startup tnt summit")).toBeUndefined(); // exact match, not case-folded
   });
 
   it("ignores a blank Source rather than polluting the cache", () => {

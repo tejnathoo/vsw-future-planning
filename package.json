@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "description": "A small always-on service (Node/TypeScript, deployed on Railway) that adds a **Slack front door** to the existing VSW Sponsor Sourcing pipeline. @mention the bot in Slack with a **URL, a CSV, a PDF, or an image of sponsor logos** and it produces deduped, review-ready prospect rows in the shared Google Sheet `data-staging` tab.",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "tsc",
+    "start": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "smoke": "tsx smoke-test.ts",
