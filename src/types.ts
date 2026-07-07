@@ -139,6 +139,30 @@ export interface ParsedContact {
   isGenericInbox?: boolean;
 }
 
+/**
+ * Every master-prospects column this feature can set directly, other than
+ * the contact block (handled separately by MasterContactFields/
+ * decideContactSlot, which has its own primary/secondary rules) and Why
+ * Them/Notes (always append-only, via whyThemAddition/notesAddition below).
+ * Added 2026-07-08 (Tej): "it should be familiar with any of the columns" —
+ * a plain-English instruction in a contact-attribution message can now also
+ * change any of these on the matched row (e.g. "make this a warm pathway").
+ */
+export const MASTER_FIELD_KEYS = [
+  "prospectId", "organizationName", "category", "subsector", "hqGeography",
+  "potentialMutualValue", "programmingAngle", "sourceType", "sourceLink",
+  "warmLead", "warmLeadPerson", "warmLeadPath", "stage", "lastTouchDate",
+  "lastTouchChannel", "nextStep", "nextFollowUpDate", "owner", "fundingType",
+  "estimatedCapacity", "targetAskRange", "exclusivityPlay", "budgetWindow",
+] as const;
+export type MasterFieldKey = typeof MASTER_FIELD_KEYS[number];
+
+/** One "set this column to this value" instruction extracted from a message. */
+export interface MasterFieldUpdate {
+  field: MasterFieldKey;
+  value: string;
+}
+
 /** Result of parsing a plain-text contact-attribution message (src/paths/contact.ts). */
 export interface ParsedContactMessage {
   organizationNameGuess: string;
@@ -147,6 +171,8 @@ export interface ParsedContactMessage {
   whyThemAddition?: string;
   /** Anything else worth keeping that isn't clearly a Why Them reason. */
   notesAddition?: string;
+  /** Any other column the message explicitly asks to change (e.g. Warm Lead?, Stage, Owner). */
+  fieldUpdates: MasterFieldUpdate[];
 }
 
 /**
