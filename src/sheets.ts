@@ -1,6 +1,8 @@
 import { google, sheets_v4 } from "googleapis";
 import { orgKey } from "./dedup";
 import type {
+  MasterContactFieldUpdates,
+  MasterContactFields,
   MasterIndexEntry,
   MasterPromotionEntry,
   MasterRow,
@@ -363,6 +365,67 @@ export async function readMasterRowAggregateFields(rowNumber: number): Promise<{
   });
   const row = res.data.values?.[0] || [];
   return { whyThem: row[0] || "", sourceLink: row[4] || "" };
+}
+
+/**
+ * Fresh read of ONE Master row's contact-related columns — Why Them (F),
+ * Primary Contact Name/Title/Email/LinkedIn (N-Q), Secondary Contact
+ * Name/LinkedIn (R/S), Generic Intake Email (T), and Notes (AF). Used by the
+ * contact-attribution feature to decide primary-vs-secondary and to append
+ * (not overwrite) Why Them/Notes, re-reading fresh right before writing.
+ */
+export async function readMasterContactFields(rowNumber: number): Promise<MasterContactFields> {
+  const tab = masterTab();
+  const res = await getSheets().spreadsheets.values.batchGet({
+    spreadsheetId: spreadsheetId(),
+    ranges: [`${tab}!F${rowNumber}`, `${tab}!N${rowNumber}:T${rowNumber}`, `${tab}!AF${rowNumber}`],
+  });
+  const [fRange, ntRange, afRange] = res.data.valueRanges || [];
+  const whyThem = fRange?.values?.[0]?.[0] || "";
+  const nt = ntRange?.values?.[0] || [];
+  const notes = afRange?.values?.[0]?.[0] || "";
+  return {
+    whyThem,
+    primaryName: nt[0] || "",
+    primaryTitle: nt[1] || "",
+    primaryEmail: nt[2] || "",
+    primaryLinkedin: nt[3] || "",
+    secondaryName: nt[4] || "",
+    secondaryLinkedin: nt[5] || "",
+    genericIntakeEmail: nt[6] || "",
+    notes,
+  };
+}
+
+/**
+ * Write ONLY the contact-related columns given in `fields` on an existing
+ * Master row — a targeted `batchUpdate` per column, exactly mirroring
+ * `updateMasterAggregateRow`'s pattern, never a full-row rewrite. This is the
+ * ONLY sanctioned way to populate N/O/P/Q/R/S/T (AGENTS.md golden rule #2
+ * carve-out, 2026-07-07) — structurally cannot touch any other column no
+ * matter what's passed, since each key maps to exactly one fixed column.
+ */
+export async function updateMasterContactFields(rowNumber: number, fields: MasterContactFieldUpdates): Promise<void> {
+  const tab = masterTab();
+  const columnByKey: Record<keyof MasterContactFields, string> = {
+    whyThem: "F",
+    primaryName: "N",
+    primaryTitle: "O",
+    primaryEmail: "P",
+    primaryLinkedin: "Q",
+    secondaryName: "R",
+    secondaryLinkedin: "S",
+    genericIntakeEmail: "T",
+    notes: "AF",
+  };
+  const data = (Object.entries(fields) as [keyof MasterContactFields, string | undefined][])
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => ({ range: `${tab}!${columnByKey[key]}${rowNumber}`, values: [[value as string]] }));
+  if (data.length === 0) return;
+  await getSheets().spreadsheets.values.batchUpdate({
+    spreadsheetId: spreadsheetId(),
+    requestBody: { valueInputOption: "RAW", data },
+  });
 }
 
 /** Deep-link to the master tab (for the Promotion Slack summary). */
