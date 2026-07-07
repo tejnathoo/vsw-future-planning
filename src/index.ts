@@ -10,8 +10,9 @@ import { forwardUrlsToN8n } from "./paths/url";
 import { processItems } from "./pipeline";
 import { answerQuestion } from "./chat/answerQuestion";
 import { runPromotionAgent, resumePendingRow } from "./promote/agent/runAgent";
+import { handleContactMention, resumePendingContact } from "./contact/runContactAgent";
 import { appendSourceTypeToDropdown, stagingSheetLink } from "./sheets";
-import { findUnresolvedByThread, isAskActive, resolvePendingQuestion } from "./promote/agent/pendingQuestions";
+import { findUnresolvedByThread, isAskActive, pendingQuestionKind, resolvePendingQuestion } from "./promote/agent/pendingQuestions";
 import { detectRoute, stripUrls, type SlackFile } from "./router";
 import { downloadSlackFile } from "./slack/download";
 import { bulletMessage } from "./slack/reply";
@@ -62,6 +63,31 @@ async function tryResumePendingQuestion(threadTs: string, answerText: string, sa
   // bug behind the confusing "isn't Approved anymore" reply (2026-07-06 fix).
   if (isAskActive(pending.id)) {
     await say({ text: `Got it — I'm still working that run, folding your answer into ${pending.organization} now.`, thread_ts: threadTs });
+    return true;
+  }
+
+  if (pendingQuestionKind(pending) === "contact") {
+    try {
+      const result = await resumePendingContact(pending, answerText, {
+        channel: pending.channel,
+        threadTs: pending.threadTs,
+        slackClient: app.client,
+      });
+      switch (result.status) {
+        case "applied":
+          await say({ ...result.message, thread_ts: threadTs });
+          break;
+        case "asked":
+          break; // resumePendingContact already posted the follow-up question
+        case "staged":
+        case "not_understood":
+          await say({ ...result.message, thread_ts: threadTs });
+          break;
+      }
+    } catch (e: any) {
+      console.error("[resume pending contact question] failed:", e.message);
+      await say({ text: `Ran into a snag picking that back up: ${e.message}`, thread_ts: threadTs });
+    }
     return true;
   }
 
@@ -337,6 +363,29 @@ app.event("app_mention", async ({ event, say, client }) => {
       break;
     case "unsupported_file":
       await say({ text: `Not sure what to do with "${route.file.name}" (${route.file.mimetype || route.file.filetype || "unknown type"}) — I can take a URL, CSV, PDF, image, or Markdown/text file.`, thread_ts });
+      break;
+    case "contact":
+      try {
+        const result = await handleContactMention(route.text, {
+          channel: event.channel,
+          threadTs: thread_ts,
+          userNote,
+          slackClient: client,
+        });
+        if (result.status === "applied") {
+          await say({ ...result.message, thread_ts });
+          await react(client, event.channel, event.ts, "white_check_mark");
+        } else if (result.status === "asked") {
+          // handleContactMention already posted its own question in-thread.
+        } else {
+          await say({ ...result.message, thread_ts });
+          await react(client, event.channel, event.ts, "x");
+        }
+      } catch (e: any) {
+        console.error("[contact path] failed:", e.message);
+        await say({ text: `Ran into a snag attributing that contact: ${e.message}`, thread_ts });
+        await react(client, event.channel, event.ts, "x");
+      }
       break;
     case "chat":
       try {
