@@ -411,10 +411,28 @@ let botUserId: string | undefined;
 
 app.event("reaction_added", async ({ event, client }) => {
   const e = event as any;
+  // Diagnostic logging (2026-07-08) — every prior guard here was silent, so a
+  // reaction that got filtered out for any reason (wrong emoji, item_user
+  // mismatch, wrong reactor) left zero trace in the logs, indistinguishable
+  // from the event never arriving at all. Log receipt + the exact reason for
+  // any skip so a "it doesn't delete anymore" report is actually debuggable
+  // next time instead of a guessing game. No PII beyond Slack IDs already
+  // visible in the event itself.
+  console.log(`[reaction_added] received: reaction=${e.reaction} itemType=${e.item?.type} itemUser=${e.item_user} reactor=${e.user} botUserId=${botUserId}`);
+
   if (e.reaction !== "wastebasket") return;
-  if (e.item?.type !== "message") return;
-  if (e.item_user !== botUserId) return;
-  if (e.user !== process.env.SLACK_ADMIN_USER_ID) return;
+  if (e.item?.type !== "message") {
+    console.log(`[reaction_added] skipped: item.type is "${e.item?.type}", not "message"`);
+    return;
+  }
+  if (e.item_user !== botUserId) {
+    console.log(`[reaction_added] skipped: item_user "${e.item_user}" !== this bot's user id "${botUserId}" — not a message this bot posted`);
+    return;
+  }
+  if (e.user !== process.env.SLACK_ADMIN_USER_ID) {
+    console.log(`[reaction_added] skipped: reactor "${e.user}" !== SLACK_ADMIN_USER_ID "${process.env.SLACK_ADMIN_USER_ID}"`);
+    return;
+  }
 
   try {
     await client.chat.delete({ channel: e.item.channel, ts: e.item.ts });
