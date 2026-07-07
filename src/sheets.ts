@@ -194,24 +194,26 @@ export async function appendMasterRow(row: MasterRow, rowNumber: number): Promis
     "", // P Email
     "", // Q LinkedIn URL
     "", // R Secondary Contact Name
-    "", // S Secondary Contact LinkedIn
-    "", // T Generic Intake Email
-    "", // U Stage
-    "", // V Last Touch Date
-    "", // W Last Touch Channel
-    "", // X Next Step
-    "", // Y Next Follow-up Date
-    "", // Z Owner
-    "", // AA Funding Type
-    "", // AB Estimated Capacity
-    "", // AC Target Ask Range
-    "", // AD Exclusivity Play? (Y/N/Unknown)
-    "", // AE Budget Window
-    row.notes, // AF
+    "", // S Secondary Contact Title
+    "", // T Secondary Contact LinkedIn
+    "", // U Secondary Contact Email
+    "", // V Generic Intake Email
+    "", // W Stage
+    "", // X Last Touch Date
+    "", // Y Last Touch Channel
+    "", // Z Next Step
+    "", // AA Next Follow-up Date
+    "", // AB Owner
+    "", // AC Funding Type
+    "", // AD Estimated Capacity
+    "", // AE Target Ask Range
+    "", // AF Exclusivity Play? (Y/N/Unknown)
+    "", // AG Budget Window
+    row.notes, // AH
   ]];
   await getSheets().spreadsheets.values.update({
     spreadsheetId: spreadsheetId(),
-    range: `${masterTab()}!B${rowNumber}:AF${rowNumber}`,
+    range: `${masterTab()}!B${rowNumber}:AH${rowNumber}`,
     valueInputOption: "RAW",
     requestBody: { values },
   });
@@ -370,29 +372,35 @@ export async function readMasterRowAggregateFields(rowNumber: number): Promise<{
 /**
  * Fresh read of ONE Master row's contact-related columns — Why Them (F),
  * Primary Contact Name/Title/Email/LinkedIn (N-Q), Secondary Contact
- * Name/LinkedIn (R/S), Generic Intake Email (T), and Notes (AF). Used by the
- * contact-attribution feature to decide primary-vs-secondary and to append
- * (not overwrite) Why Them/Notes, re-reading fresh right before writing.
+ * Name/Title/LinkedIn/Email (R-U), Generic Intake Email (V), and Notes (AH).
+ * Column layout updated 2026-07-08 — Tej added Secondary Contact Title (S)
+ * and Secondary Contact Email (U), shifting everything from the old S
+ * onward right by two (Secondary LinkedIn S->T, Generic Intake T->V, Notes
+ * AF->AH). Used by the contact-attribution feature to decide
+ * primary-vs-secondary and to append (not overwrite) Why Them/Notes,
+ * re-reading fresh right before writing.
  */
 export async function readMasterContactFields(rowNumber: number): Promise<MasterContactFields> {
   const tab = masterTab();
   const res = await getSheets().spreadsheets.values.batchGet({
     spreadsheetId: spreadsheetId(),
-    ranges: [`${tab}!F${rowNumber}`, `${tab}!N${rowNumber}:T${rowNumber}`, `${tab}!AF${rowNumber}`],
+    ranges: [`${tab}!F${rowNumber}`, `${tab}!N${rowNumber}:V${rowNumber}`, `${tab}!AH${rowNumber}`],
   });
-  const [fRange, ntRange, afRange] = res.data.valueRanges || [];
+  const [fRange, nvRange, ahRange] = res.data.valueRanges || [];
   const whyThem = fRange?.values?.[0]?.[0] || "";
-  const nt = ntRange?.values?.[0] || [];
-  const notes = afRange?.values?.[0]?.[0] || "";
+  const nv = nvRange?.values?.[0] || [];
+  const notes = ahRange?.values?.[0]?.[0] || "";
   return {
     whyThem,
-    primaryName: nt[0] || "",
-    primaryTitle: nt[1] || "",
-    primaryEmail: nt[2] || "",
-    primaryLinkedin: nt[3] || "",
-    secondaryName: nt[4] || "",
-    secondaryLinkedin: nt[5] || "",
-    genericIntakeEmail: nt[6] || "",
+    primaryName: nv[0] || "",
+    primaryTitle: nv[1] || "",
+    primaryEmail: nv[2] || "",
+    primaryLinkedin: nv[3] || "",
+    secondaryName: nv[4] || "",
+    secondaryTitle: nv[5] || "",
+    secondaryLinkedin: nv[6] || "",
+    secondaryEmail: nv[7] || "",
+    genericIntakeEmail: nv[8] || "",
     notes,
   };
 }
@@ -401,9 +409,10 @@ export async function readMasterContactFields(rowNumber: number): Promise<Master
  * Write ONLY the contact-related columns given in `fields` on an existing
  * Master row — a targeted `batchUpdate` per column, exactly mirroring
  * `updateMasterAggregateRow`'s pattern, never a full-row rewrite. This is the
- * ONLY sanctioned way to populate N/O/P/Q/R/S/T (AGENTS.md golden rule #2
- * carve-out, 2026-07-07) — structurally cannot touch any other column no
- * matter what's passed, since each key maps to exactly one fixed column.
+ * ONLY sanctioned way to populate N/O/P/Q/R/S/T/U/V (AGENTS.md golden rule #2
+ * carve-out, 2026-07-07; column map updated 2026-07-08) — structurally
+ * cannot touch any other column no matter what's passed, since each key maps
+ * to exactly one fixed column.
  */
 export async function updateMasterContactFields(rowNumber: number, fields: MasterContactFieldUpdates): Promise<void> {
   const tab = masterTab();
@@ -414,9 +423,11 @@ export async function updateMasterContactFields(rowNumber: number, fields: Maste
     primaryEmail: "P",
     primaryLinkedin: "Q",
     secondaryName: "R",
-    secondaryLinkedin: "S",
-    genericIntakeEmail: "T",
-    notes: "AF",
+    secondaryTitle: "S",
+    secondaryLinkedin: "T",
+    secondaryEmail: "U",
+    genericIntakeEmail: "V",
+    notes: "AH",
   };
   const data = (Object.entries(fields) as [keyof MasterContactFields, string | undefined][])
     .filter(([, value]) => value !== undefined)
