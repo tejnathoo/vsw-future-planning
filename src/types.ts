@@ -108,8 +108,10 @@ export interface StagingApprovedRow {
 }
 
 /**
- * One new master-prospects row for Path A append (columns A-AF, exact order).
- * Only B/C/D/F/I/J/K/M/AF are ever populated; the rest are always blank (§10.5).
+ * One new master-prospects row for Path A append (columns A-AH, exact order —
+ * Tej added Secondary Contact Title + Secondary Contact Email 2026-07-08,
+ * shifting every column from the old S onward right by two).
+ * Only B/C/D/F/I/J/K/M/AH are ever populated; the rest are always blank (§10.5).
  */
 export interface MasterRow {
   organizationName: string; // B
@@ -120,7 +122,7 @@ export interface MasterRow {
   sourceLink: string; // J
   warmLead: boolean; // K — a real checkbox in the sheet (TRUE/FALSE), not "Y"/"Unknown" text
   warmLeadPath: string; // M
-  notes: string; // AF
+  notes: string; // AH
 }
 
 export type DedupOutcome =
@@ -147,7 +149,12 @@ export interface ParsedContactMessage {
   notesAddition?: string;
 }
 
-/** The subset of an existing master-prospects row's contact-related columns (N-T, plus F/AF for appends). */
+/**
+ * The subset of an existing master-prospects row's contact-related columns
+ * (N-V, plus F/AH for appends) — updated 2026-07-08 when Tej added Secondary
+ * Contact Title (S) + Secondary Contact Email (U), shifting Secondary
+ * LinkedIn from S->T, Generic Intake Email from T->V, and Notes from AF->AH.
+ */
 export interface MasterContactFields {
   whyThem: string; // F
   primaryName: string; // N
@@ -155,9 +162,11 @@ export interface MasterContactFields {
   primaryEmail: string; // P
   primaryLinkedin: string; // Q
   secondaryName: string; // R
-  secondaryLinkedin: string; // S
-  genericIntakeEmail: string; // T
-  notes: string; // AF
+  secondaryTitle: string; // S
+  secondaryLinkedin: string; // T
+  secondaryEmail: string; // U
+  genericIntakeEmail: string; // V
+  notes: string; // AH
 }
 
 /**
