@@ -101,6 +101,29 @@ describe("detectRoute — approve command (PRD §11.4, gated dropdown-add)", () 
   });
 });
 
+describe("detectRoute — contact attribution (2026-07-07)", () => {
+  it("routes a message with an email address to contact", () => {
+    const r = detectRoute({ text: "Aritzia — Jane Doe, VP Marketing, jane@aritzia.ca", files: [] });
+    expect(r).toEqual({ kind: "contact", text: "Aritzia — Jane Doe, VP Marketing, jane@aritzia.ca" });
+  });
+  it("routes a generic-inbox message with an email", () => {
+    const r = detectRoute({ text: "generic inbox for Aritzia is service@aritzia.ca", files: [] });
+    expect(r.kind).toBe("contact");
+  });
+  it("routes a LinkedIn profile URL accompanied by other text to contact", () => {
+    const r = detectRoute({ text: "Aritzia — Jane Doe, https://www.linkedin.com/in/janedoe", files: [] });
+    expect(r.kind).toBe("contact");
+  });
+  it("still forwards a bare LinkedIn URL with no other text to the URL path, unchanged", () => {
+    const r = detectRoute({ text: "https://www.linkedin.com/in/janedoe", files: [] });
+    expect(r.kind).toBe("url");
+  });
+  it("prefers an attached file over contact detection", () => {
+    const r = detectRoute({ text: "jane@aritzia.ca", files: [{ name: "sponsors.csv", filetype: "csv" }] });
+    expect(r.kind).toBe("csv");
+  });
+});
+
 describe("detectRoute — chat (PRD §12, conversational Q&A)", () => {
   it("routes plain text with no URL and no file to chat", () => {
     expect(detectRoute({ text: "hey what's up", files: [] })).toEqual({

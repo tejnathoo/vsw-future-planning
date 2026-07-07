@@ -16,10 +16,13 @@ export type Route =
   | { kind: "promote" }
   | { kind: "approve"; value: string }
   | { kind: "unsupported_file"; file: SlackFile }
+  | { kind: "contact"; text: string }
   | { kind: "chat"; text: string }
   | { kind: "none" };
 
 const URL_REGEX = /https?:\/\/[^\s<>|]+/g;
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+const LINKEDIN_REGEX = /linkedin\.com\/in\//i;
 
 function extractUrls(text: string): string[] {
   const matches = text.match(URL_REGEX) || [];
@@ -33,16 +36,35 @@ export function stripUrls(text: string): string {
 }
 
 /**
+ * Contact-attribution detection (no file, no promote/approve command): an
+ * email address in free text is an unambiguous signal on its own — it's never
+ * a scrape target. A LinkedIn profile URL is more ambiguous, since a bare
+ * pasted LinkedIn URL should keep forwarding to n8n like any other URL
+ * (unchanged existing behavior) — it only counts here when there's other text
+ * alongside it (name/title context), never a lone link.
+ */
+function looksLikeContactMessage(text: string): boolean {
+  if (EMAIL_REGEX.test(text)) return true;
+  if (LINKEDIN_REGEX.test(text) && stripUrls(text).length > 0) return true;
+  return false;
+}
+
+/**
  * Route one app_mention event, per PRD §4.6 (+ §10.2 promote command):
  *   1. files[] present -> route by mimetype/filetype (csv/pdf/image/md-txt).
  *   2. no file, text is the "promote" command -> Promotion Agent (PRD §11).
  *   3. no file, text is "approve <value>" -> add a Source Type to the live
  *      dropdown (PRD §11.4 — gated, never reachable from the reasoning loop
  *      itself, only from this explicit human command).
- *   4. no file but a URL in text -> URL forwarder.
- *   5. no file, no URL, but some other text -> "chat" (conversational Q&A,
+ *   4. no file, no promote/approve, text has an email (or a LinkedIn profile
+ *      URL plus other text) -> "contact" (attribute a contact/generic inbox to
+ *      an existing master-prospects row — checked before URL forwarding so a
+ *      LinkedIn URL accompanied by name/title context doesn't get forwarded
+ *      to n8n for scraping).
+ *   5. no file but a URL in text -> URL forwarder.
+ *   6. no file, no URL, but some other text -> "chat" (conversational Q&A,
  *      PRD §12 — plain-chat questions about the spreadsheet/build).
- *   6. neither (bare mention, no text) -> "none" (caller asks for a link/CSV/PDF/image/text file).
+ *   7. neither (bare mention, no text) -> "none" (caller asks for a link/CSV/PDF/image/text file).
  * Pure function — no Slack client, no I/O — fully unit-testable.
  */
 export function detectRoute(input: { text: string; files: SlackFile[] }): Route {
@@ -84,6 +106,10 @@ export function detectRoute(input: { text: string; files: SlackFile[] }): Route 
     const original = (input.text || "").trim();
     const value = original.slice(original.toLowerCase().indexOf("approve ") + "approve ".length).trim();
     return { kind: "approve", value };
+  }
+
+  if (looksLikeContactMessage(input.text || "")) {
+    return { kind: "contact", text: (input.text || "").trim() };
   }
 
   const urls = extractUrls(input.text || "");
