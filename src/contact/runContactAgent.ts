@@ -4,14 +4,57 @@ import { parseContactMessage } from "../paths/contact";
 import { processItems } from "../pipeline";
 import {
   appendAggregate,
+  coerceBoolean,
   masterSheetLink,
   readMasterContactFields,
   readMasterPromotionIndex,
   updateMasterContactFields,
+  updateMasterFields,
 } from "../sheets";
 import { bulletMessage } from "../slack/reply";
-import type { MasterContactFieldUpdates, MasterContactFields, ParsedContact, ParsedContactMessage } from "../types";
+import type { MasterContactFieldUpdates, MasterContactFields, MasterFieldKey, ParsedContact, ParsedContactMessage } from "../types";
 import { addPendingQuestion, type PendingQuestion } from "../promote/agent/pendingQuestions";
+
+const FIELD_LABELS: Record<MasterFieldKey, string> = {
+  prospectId: "Prospect ID",
+  organizationName: "Organization Name",
+  category: "Category",
+  subsector: "Subsector",
+  hqGeography: "HQ / Geography",
+  potentialMutualValue: "Potential Mutual Value",
+  programmingAngle: "Programming Angle",
+  sourceType: "Source Type",
+  sourceLink: "Source Link",
+  warmLead: "Warm Lead?",
+  warmLeadPerson: "Warm Lead Person",
+  warmLeadPath: "Warm Lead Path",
+  stage: "Stage",
+  lastTouchDate: "Last Touch Date",
+  lastTouchChannel: "Last Touch Channel",
+  nextStep: "Next Step",
+  nextFollowUpDate: "Next Follow-up Date",
+  owner: "Owner",
+  fundingType: "Funding Type",
+  estimatedCapacity: "Estimated Capacity",
+  targetAskRange: "Target Ask Range",
+  exclusivityPlay: "Exclusivity Play?",
+  budgetWindow: "Budget Window",
+};
+
+/** Apply each field update independently so one invalid value (e.g. a bad Category) doesn't block the rest. */
+async function applyFieldUpdates(rowNumber: number, updates: ParsedContactMessage["fieldUpdates"]): Promise<{ applied: string[]; failed: string[] }> {
+  const applied: string[] = [];
+  const failed: string[] = [];
+  for (const update of updates) {
+    try {
+      await updateMasterFields(rowNumber, [update]);
+      applied.push(`${FIELD_LABELS[update.field]} → ${update.field === "warmLead" ? (coerceBoolean(update.value) ? "Yes" : "No") : update.value}`);
+    } catch (e: any) {
+      failed.push(`${FIELD_LABELS[update.field]}: ${e.message}`);
+    }
+  }
+  return { applied, failed };
+}
 
 interface SlackClient {
   chat: { postMessage: (args: any) => Promise<any> };
@@ -100,11 +143,16 @@ async function applyContactUpdate(
     await updateMasterContactFields(rowNumber, fields);
   }
 
+  const { applied: fieldsApplied, failed: fieldsFailed } = await applyFieldUpdates(rowNumber, parsed.fieldUpdates);
+  applied.push(...fieldsApplied);
+
   const bullets = applied.length > 0 ? applied : ["Nothing new to write (already up to date)."];
+  const extraSections = fieldsFailed.length > 0 ? [`Couldn't apply:\n${fieldsFailed.map((f) => `• ${f}`).join("\n")}`] : [];
   const message = bulletMessage(
     `Updated ${organization}!`,
     bullets,
-    `📋 <${masterSheetLink()}|Open Master Prospects> (row ${rowNumber})`
+    `📋 <${masterSheetLink()}|Open Master Prospects> (row ${rowNumber})`,
+    extraSections
   );
   return { status: "applied", message };
 }
@@ -159,14 +207,14 @@ async function askOrgMatch(
   });
 }
 
-/** Entry point for the "contact" route (router.ts) — a plain @mention attributing a contact/generic inbox. */
+/** Entry point for the "contact" route (router.ts) — a plain @mention attributing a contact/generic inbox, and/or changing any other field on an existing row (e.g. "make this a warm pathway"). */
 export async function handleContactMention(text: string, ctx: ContactMentionCtx): Promise<ContactMentionResult> {
   const parsed = await parseContactMessage(text, ctx.userNote);
   if (!parsed.organizationNameGuess) {
     return { status: "error", message: { text: "I couldn't tell which company this is for — mention me again with the company name up front." } };
   }
-  if (parsed.contacts.length === 0) {
-    return { status: "error", message: { text: `I couldn't find a name, email, or LinkedIn for ${parsed.organizationNameGuess} in that message — try again with those details.` } };
+  if (parsed.contacts.length === 0 && parsed.fieldUpdates.length === 0 && !parsed.whyThemAddition && !parsed.notesAddition) {
+    return { status: "error", message: { text: `I couldn't find a name, email, LinkedIn, or a clear change to make for ${parsed.organizationNameGuess} in that message — try again with those details.` } };
   }
 
   const masterIndex = await readMasterPromotionIndex();
