@@ -45,7 +45,6 @@ async function applyContactUpdate(
   const effective = { ...current };
   const fields: MasterContactFieldUpdates = {};
   const applied: string[] = [];
-  const notesOverflow: string[] = [];
 
   for (const contact of parsed.contacts) {
     if (contact.isGenericInbox) {
@@ -77,22 +76,21 @@ async function applyContactUpdate(
       applied.push(`Primary contact: ${contact.name || "(unnamed)"}${contact.title ? `, ${contact.title}` : ""}`);
     } else {
       fields.secondaryName = contact.name || "";
+      fields.secondaryTitle = contact.title || "";
       fields.secondaryLinkedin = contact.linkedin || "";
-      effective.secondaryName = fields.secondaryName;
-      applied.push(`Secondary contact: ${contact.name || "(unnamed)"}`);
-      // The sheet has no Secondary Title/Email column — anything given there
-      // has nowhere else to go but Notes.
-      if (contact.title || contact.email) {
-        notesOverflow.push(
-          `Secondary contact ${contact.name || ""} — ${[contact.title, contact.email].filter(Boolean).join(", ")} (no secondary title/email column)`
-        );
-      }
+      fields.secondaryEmail = contact.email || "";
+      Object.assign(effective, {
+        secondaryName: fields.secondaryName,
+        secondaryTitle: fields.secondaryTitle,
+        secondaryLinkedin: fields.secondaryLinkedin,
+        secondaryEmail: fields.secondaryEmail,
+      });
+      applied.push(`Secondary contact: ${contact.name || "(unnamed)"}${contact.title ? `, ${contact.title}` : ""}`);
     }
   }
 
-  const notesAdditions = [parsed.notesAddition, ...notesOverflow].filter(Boolean) as string[];
-  if (notesAdditions.length > 0) {
-    fields.notes = notesAdditions.reduce((acc, add) => appendAggregate(acc, add), current.notes);
+  if (parsed.notesAddition) {
+    fields.notes = appendAggregate(current.notes, parsed.notesAddition);
   }
   if (parsed.whyThemAddition) {
     fields.whyThem = appendAggregate(current.whyThem, parsed.whyThemAddition);
@@ -203,7 +201,9 @@ export async function resumePendingContact(pending: PendingQuestion, answer: str
       fields.primaryLinkedin = contact.linkedin || "";
     } else if (/secondary/i.test(answer)) {
       fields.secondaryName = contact.name || "";
+      fields.secondaryTitle = contact.title || "";
       fields.secondaryLinkedin = contact.linkedin || "";
+      fields.secondaryEmail = contact.email || "";
     } else {
       fields.notes = appendAggregate(current.notes, `Contact (unresolved primary/secondary): ${contact.name || ""} — ${[contact.title, contact.email, contact.linkedin].filter(Boolean).join(", ")}`);
     }
