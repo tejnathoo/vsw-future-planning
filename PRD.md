@@ -37,8 +37,8 @@ If this PRD and the Notion Build Brief ever disagree, the **Notion Build Brief w
 ### Non-goals
 - **No URL scraping in this service.** URLs are forwarded to n8n's existing webhook; n8n owns Firecrawl/Stagehand/extract/dedup/write for that path.
 - Not decommissioning n8n.
-- **No writing to the Master tab (`master-prospects`) — except via the one sanctioned, human-gated Promotion feature (§10).** Outside that feature's per-row `Approved` gate, this rule is absolute.
-- No contact sourcing (the `Contact` column stays blank — human-owned).
+- **No writing to the Master tab (`master-prospects`) — except via the two sanctioned, structurally-scoped features: Promotion (§10/§11) and contact attribution (§13).** Outside those, this rule is absolute.
+- No contact *sourcing* (the service never goes looking for a name/email as its own research task — AGENTS.md golden rule #2) — the `data-staging` `Contact` column (K) stays blank, human-owned, always. This is separate from §13's contact-*attribution* feature, which writes master-prospects' own Primary/Secondary Contact columns (N-T) directly, but only when Tej explicitly provides the contact via Slack — never inferred/researched.
 - No LinkedIn / auth-gated / personal-email scraping.
 
 ---
@@ -227,7 +227,7 @@ On `app_mention` (file uploads are only processed if attached to a message that 
 | Warm Lead? (Y/N/Unknown) | Warm Lead | `"Y"` if Warm Lead is non-empty, else `"Unknown"` (never assume `"N"`) |
 | Warm Lead Person | — | leave blank; Staging never captures a person name |
 | Warm Lead Path | Warm Lead | copy the free-text rationale (closest fit for Staging's one Warm Lead field) |
-| Primary/Secondary Contact Name, Title, Email, LinkedIn URL, Secondary LinkedIn, Generic Intake Email | — | always leave blank — human-owned (D3), never populated by any pipeline path |
+| Primary/Secondary Contact Name, Title, Email, LinkedIn URL, Secondary LinkedIn, Generic Intake Email | — | always leave blank on Path A/B promotion — human-owned (D3); the ONE exception is the contact-attribution feature (§13), which writes these columns directly via `updateMasterContactFields`, never through `append_master_row`/`update_master_aggregate_row` |
 | Stage | — | leave blank; no `Stage` dropdown exists yet — outreach pipeline isn't designed (§10.6 Q2, resolved) |
 | Last Touch Date, Last Touch Channel, Next Step, Next Follow-up Date, Owner | — | leave blank; human fills in once a prospect enters active work |
 | Funding Type, Estimated Capacity, Target Ask Range, Exclusivity Play? (Y/N/Unknown), Budget Window | — | leave blank; not collected by the scraper |
@@ -298,7 +298,7 @@ Researched 2026-07-04: the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`) i
 | `ask_tej_on_slack` | Write, low-risk | See §11.5 — posts + persists as resumable, not a blocking dead-end |
 | `append_source_type_to_dropdown` | Write, **gated** | Only runs after Tej's explicit `@bot approve <value>` — never offered as something the reasoning loop can decide to call on its own initiative |
 
-**Deliberately not in v1:** any tool that writes a Contact field (AGENTS.md golden rule #2 — opportunistic surfacing via Slack only, never a direct write); `firecrawl_interact` (no click/form/login need for this task); anything resembling "modify this repo's own code" (golden rule #16 — suggest, don't self-build).
+**Deliberately not given to the Promotion Agent:** any tool that writes a Contact field (AGENTS.md golden rule #2 — opportunistic surfacing via Slack only, never a direct write *from this agent*; §13's separate contact-attribution feature is the one place Contact columns ARE written directly, but only from an explicit human-provided Slack message, never from this agent's own research); `firecrawl_interact` (no click/form/login need for this task); anything resembling "modify this repo's own code" (golden rule #16 — suggest, don't self-build).
 
 ### 11.5 Human-in-the-loop: `ask_tej_on_slack`, timeout, and resuming later
 1. Agent posts the question in-thread and the pending question is **persisted immediately** (not just held in memory) — recorded with the thread_ts, the question, and enough context to resume that one item specifically.
@@ -332,3 +332,16 @@ A separate, lighter feature from the Promotion Agent (§11) — a plain `@bot` m
 - **Implementation:** `src/chat/answerQuestion.ts` — a small bounded tool loop (max 4 tool calls / 30s wall clock, far smaller than the Promotion Agent's 6/90s) against the same `@anthropic-ai/sdk` client, with its own system prompt (`src/chat/systemPrompt.ts`) and two read-only tools (`src/chat/tools.ts`): `read_master_snapshot`, `read_staging_snapshot`.
 - **Easter egg (`src/chat/easterEggs.ts`):** checked before the model is ever called — "will you be my friend" gets a fixed, free, instant reply. Not a real requirement, just a fun one Katty asked for during the build.
 - **Routing:** `router.ts`'s `detectRoute` — a mention with no file, no URL, and no `promote`/`approve` command, but some other text, now routes to `{ kind: "chat" }` instead of falling through to `none`. A bare mention with no text at all still gets the `none` help prompt.
+
+## 13. Contact attribution (plain-mention, writes master-prospects directly)
+
+A plain `@bot` mention attributing a contact/generic inbox to a company **already in `master-prospects`** — e.g. `"Aritzia — Jane Doe, VP Marketing, jane@aritzia.ca"` or `"generic inbox for Aritzia is service@aritzia.ca"`. Unlike chat (§12), this DOES write — but only through one structurally-scoped function, the second sanctioned exception to "never write master-prospects outside the Promotion Agent" (golden rule #1), and a deliberate carve-out to golden rule #2's "Contact fields... off-limits to every tool."
+
+- **Routing:** `router.ts`'s `detectRoute` — checked before URL-forwarding. An email address anywhere in the text routes to `{kind:"contact"}` unconditionally; a LinkedIn profile URL (`linkedin.com/in/`) only counts when accompanied by other text, so a bare pasted LinkedIn URL still forwards to n8n exactly as before.
+- **Parsing:** `src/paths/contact.ts`'s `parseContactMessage` — one Anthropic call, no D12 substring check (the user is typing directly, not extracting from a fetched document). Returns the org-name guess, one or more contacts (name/title/email/linkedin, or a generic-inbox flag), and optionally a Why Them addition (ONLY when the message explicitly frames something as a reason to approach the org) or a Notes addition (everything else).
+- **Org matching:** `src/contact/matchOrg.ts`'s `matchMasterOrg` — deterministic `sameOrg()` first (same matcher the dedup engine and the Promotion Agent's `match_master_org` tool use), falling back to one Anthropic call over the live Master org-name list only when nothing matches deterministically. Ambiguous (0 or 2+ candidates) → asks Tej.
+- **Writing:** `src/sheets.ts`'s `updateMasterContactFields` — the ONLY function allowed to touch Primary Contact Name/Title/Email/LinkedIn (N/O/P/Q), Secondary Contact Name/LinkedIn (R/S), or Generic Intake Email (T); also does append-only writes to Why Them (F, via `appendAggregate`) and Notes (AF). Structurally cannot touch any other column, same defense-in-depth as `append_master_row`/`update_master_aggregate_row` (golden rule #15).
+- **Primary vs. secondary:** `src/contact/contactSlot.ts`'s `decideContactSlot` (pure, unit-tested) — primary if N/O/P/Q are all blank, else secondary if R/S are blank, else ambiguous (asks Tej whether to overwrite primary, overwrite secondary, or just log in Notes). Secondary has no Title/Email column — if given, it's appended to Notes instead.
+- **Org not found:** asks Tej, and the reply can go three ways (`src/contact/runContactAgent.ts`'s `resumePendingContact`): confirms new → staged via the existing `processItems`/`classifyItem` pipeline like any other intake path (Source: "Manual (Slack contact)"), never a direct Master write for a net-new org; corrects with a row number → re-reads that row fresh and writes directly; names a different org without a row number → re-runs the match against the correction.
+- **Ambiguity/hold-resume:** reuses the Promotion Agent's existing `PendingQuestion` persistence + `app.message()` late-reply listener (`kind: "contact"` discriminator, `pendingQuestions.ts`) rather than a parallel mechanism — `index.ts`'s `tryResumePendingQuestion` branches on `kind` to call `resumePendingContact` instead of `resumePendingRow`.
+- **Not in v1:** auto-requeuing the original contact payload after a net-new org gets promoted — Tej is asked to re-send the contact message once it's live in Master.
