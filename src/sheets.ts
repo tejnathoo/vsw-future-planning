@@ -1,14 +1,17 @@
 import { google, sheets_v4 } from "googleapis";
 import { orgKey } from "./dedup";
-import type {
-  MasterContactFieldUpdates,
-  MasterContactFields,
-  MasterIndexEntry,
-  MasterPromotionEntry,
-  MasterRow,
-  StagingApprovedRow,
-  StagingIndexEntry,
-  StagingRow,
+import {
+  CATEGORY_ENUM,
+  type MasterContactFieldUpdates,
+  type MasterContactFields,
+  type MasterFieldKey,
+  type MasterFieldUpdate,
+  type MasterIndexEntry,
+  type MasterPromotionEntry,
+  type MasterRow,
+  type StagingApprovedRow,
+  type StagingIndexEntry,
+  type StagingRow,
 } from "./types";
 
 let sheetsClient: sheets_v4.Sheets | undefined;
@@ -436,6 +439,80 @@ export async function updateMasterContactFields(rowNumber: number, fields: Maste
   await getSheets().spreadsheets.values.batchUpdate({
     spreadsheetId: spreadsheetId(),
     requestBody: { valueInputOption: "RAW", data },
+  });
+}
+
+/**
+ * Every column outside the contact block (handled by updateMasterContactFields)
+ * and Why Them/Notes (always append-only elsewhere) that the contact-attribution
+ * feature can set directly (2026-07-08, Tej — "familiar with any of the
+ * columns"). Kept as its own explicit map, same defense-in-depth pattern as
+ * every other write helper in this file — a field key can only ever resolve
+ * to exactly one column.
+ */
+const MASTER_FIELD_COLUMNS: Record<MasterFieldKey, string> = {
+  prospectId: "A",
+  organizationName: "B",
+  category: "C",
+  subsector: "D",
+  hqGeography: "E",
+  potentialMutualValue: "G",
+  programmingAngle: "H",
+  sourceType: "I",
+  sourceLink: "J",
+  warmLead: "K",
+  warmLeadPerson: "L",
+  warmLeadPath: "M",
+  stage: "W",
+  lastTouchDate: "X",
+  lastTouchChannel: "Y",
+  nextStep: "Z",
+  nextFollowUpDate: "AA",
+  owner: "AB",
+  fundingType: "AC",
+  estimatedCapacity: "AD",
+  targetAskRange: "AE",
+  exclusivityPlay: "AF",
+  budgetWindow: "AG",
+};
+
+/** true/false/y/yes/warm -> real boolean text for a checkbox column (mirrors append_master_row's warmLead coercion). */
+export function coerceBoolean(value: string): boolean {
+  return /^(true|y|yes|warm)$/i.test(value.trim());
+}
+
+/**
+ * Write one or more arbitrary master-prospects fields on an existing row, via
+ * MASTER_FIELD_COLUMNS' explicit key->column map — structurally cannot touch
+ * any column outside that map. Validates Category/Source Type against their
+ * live enums before writing (golden rule #15 — Sheets' own strict validation
+ * does not protect API writes) and coerces Warm Lead? to a real boolean for
+ * its checkbox column. Throws on an invalid enum value rather than writing it;
+ * callers should catch per-update so one bad field doesn't block the rest of
+ * a message's changes.
+ */
+export async function updateMasterFields(rowNumber: number, updates: MasterFieldUpdate[]): Promise<void> {
+  if (updates.length === 0) return;
+  const tab = masterTab();
+
+  const resolved: { range: string; values: (string | boolean)[][] }[] = [];
+  for (const { field, value } of updates) {
+    if (field === "category" && !(CATEGORY_ENUM as readonly string[]).includes(value)) {
+      throw new Error(`updateMasterFields: "${value}" is not a valid Category — must be one of: ${CATEGORY_ENUM.join(", ")}`);
+    }
+    if (field === "sourceType") {
+      const live = await readSourceTypeDropdown();
+      if (!live.includes(value)) {
+        throw new Error(`updateMasterFields: "${value}" is not a live Source Type value (live: ${live.join(", ")})`);
+      }
+    }
+    const cellValue: string | boolean = field === "warmLead" ? coerceBoolean(value) : value;
+    resolved.push({ range: `${tab}!${MASTER_FIELD_COLUMNS[field]}${rowNumber}`, values: [[cellValue]] });
+  }
+
+  await getSheets().spreadsheets.values.batchUpdate({
+    spreadsheetId: spreadsheetId(),
+    requestBody: { valueInputOption: "RAW", data: resolved },
   });
 }
 
