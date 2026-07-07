@@ -6,11 +6,21 @@ import * as path from "path";
  * on creation — NOT just held in memory — so a reply arriving after the run's
  * own 5-minute wait has ended can still resume the right row via the `message`
  * event listener (index.ts), regardless of how much time has passed.
+ *
+ * Generalized 2026-07-07 for the contact-attribution feature, which reuses
+ * this exact persistence + resume mechanism instead of building a parallel
+ * one — `kind` distinguishes which resume path handles the reply (defaults to
+ * "promotion" when absent, so every question written before this change still
+ * reads back correctly). `payload` carries whatever a "contact" question needs
+ * to resume (the parsed contact fields, org-match candidates, etc.) since that
+ * flow has no staging row of its own to re-read.
  */
 export interface PendingQuestion {
   id: string;
+  kind?: "promotion" | "contact";
   organization: string;
-  stagingRowNumber: number;
+  /** Only meaningful for kind "promotion" — the contact flow has no staging row of its own. */
+  stagingRowNumber?: number;
   channel: string;
   threadTs: string;
   question: string;
@@ -18,6 +28,12 @@ export interface PendingQuestion {
   resolved: boolean;
   answer?: string;
   answeredAt?: string;
+  payload?: Record<string, unknown>;
+}
+
+/** `kind` defaults to "promotion" for questions written before this field existed. */
+export function pendingQuestionKind(q: PendingQuestion): "promotion" | "contact" {
+  return q.kind ?? "promotion";
 }
 
 /** Overridable for tests only — never set in production (see .env.example). */
