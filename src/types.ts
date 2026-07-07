@@ -20,7 +20,7 @@ export const CATEGORY_ENUM = [
 export type Category = typeof CATEGORY_ENUM[number];
 
 export type DuplicateFlag = "" | "Review" | "In Master";
-export type Extractor = "CSV import" | "Vision" | "PDF" | "Text";
+export type Extractor = "CSV import" | "Vision" | "PDF" | "Text" | "Manual";
 
 /** One data-staging row, columns A-R in exact order. */
 export interface StagingRow {
@@ -126,3 +126,42 @@ export interface MasterRow {
 export type DedupOutcome =
   | { kind: "merge"; rowNumber: number; appendSourceUrl: boolean }
   | { kind: "new"; duplicate: DuplicateFlag; matchedOrg: string };
+
+/** One contact (or generic inbox) extracted from a plain-text Slack contact-attribution message. */
+export interface ParsedContact {
+  name?: string;
+  title?: string;
+  email?: string;
+  linkedin?: string;
+  /** True when this is a shared/generic inbox (e.g. "service@aritzia.ca"), not a named person. */
+  isGenericInbox?: boolean;
+}
+
+/** Result of parsing a plain-text contact-attribution message (src/paths/contact.ts). */
+export interface ParsedContactMessage {
+  organizationNameGuess: string;
+  contacts: ParsedContact[];
+  /** Only set when the message explicitly frames extra info as a reason to approach the org. */
+  whyThemAddition?: string;
+  /** Anything else worth keeping that isn't clearly a Why Them reason. */
+  notesAddition?: string;
+}
+
+/** The subset of an existing master-prospects row's contact-related columns (N-T, plus F/AF for appends). */
+export interface MasterContactFields {
+  whyThem: string; // F
+  primaryName: string; // N
+  primaryTitle: string; // O
+  primaryEmail: string; // P
+  primaryLinkedin: string; // Q
+  secondaryName: string; // R
+  secondaryLinkedin: string; // S
+  genericIntakeEmail: string; // T
+  notes: string; // AF
+}
+
+/**
+ * Cells to write via updateMasterContactFields — only the keys present get
+ * written; anything else on the row is left untouched (never a full rewrite).
+ */
+export type MasterContactFieldUpdates = Partial<MasterContactFields>;
