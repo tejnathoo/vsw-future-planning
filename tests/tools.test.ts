@@ -30,7 +30,7 @@ vi.mock("../src/promote/agent/firecrawlClient", () => firecrawlMocks);
 const cacheMocks = vi.hoisted(() => ({ getCachedSourceType: vi.fn(), setCachedSourceType: vi.fn() }));
 vi.mock("../src/promote/agent/sourceTypeCache", () => cacheMocks);
 
-const pendingMocks = vi.hoisted(() => ({ addPendingQuestion: vi.fn(), pollForAnswer: vi.fn() }));
+const pendingMocks = vi.hoisted(() => ({ addPendingQuestion: vi.fn(), pollForAnswer: vi.fn(), markAskActive: vi.fn(), markAskInactive: vi.fn() }));
 vi.mock("../src/promote/agent/pendingQuestions", () => pendingMocks);
 
 const { TOOLS } = await import("../src/promote/agent/tools");
@@ -105,6 +105,20 @@ describe("append_master_row — enum validation before any write (golden rule #1
     expect(result.rowNumber).toBe(177);
     expect(sheetsMocks.appendMasterRow).toHaveBeenCalledWith(expect.objectContaining({ organizationName: "Acme", sourceType: "Past VSW sponsor" }), 177);
     expect(cacheMocks.setCachedSourceType).toHaveBeenCalledWith("Viv sponsor CSV", "Past VSW sponsor");
+  });
+
+  it("coerces Warm Lead? to a real boolean (checkbox column) — string/Y/yes → true, falsy → false", async () => {
+    sheetsMocks.readSourceTypeDropdown.mockResolvedValue(["Past VSW sponsor"]);
+    sheetsMocks.readMasterPromotionIndex.mockResolvedValue([]);
+    sheetsMocks.nextMasterRowNumber.mockReturnValue(177);
+    sheetsMocks.appendMasterRow.mockResolvedValue(undefined);
+    const base = { organizationName: "Acme", category: "Tech", subsector: "SaaS", whyThem: "x", sourceType: "Past VSW sponsor", sourceLink: "x", warmLeadPath: "x", notes: "x" };
+
+    for (const [input, expected] of [[true, true], ["Y", true], ["yes", true], [false, false], ["Unknown", false], ["", false]] as const) {
+      sheetsMocks.appendMasterRow.mockClear();
+      await tool("append_master_row").handler({ ...base, warmLead: input }, baseCtx());
+      expect(sheetsMocks.appendMasterRow).toHaveBeenCalledWith(expect.objectContaining({ warmLead: expected }), 177);
+    }
   });
 });
 

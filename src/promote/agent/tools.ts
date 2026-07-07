@@ -12,7 +12,7 @@ import {
 import { CATEGORY_ENUM } from "../../types";
 import { firecrawlScrape, firecrawlSearch } from "./firecrawlClient";
 import { getCachedSourceType, setCachedSourceType } from "./sourceTypeCache";
-import { addPendingQuestion, pollForAnswer } from "./pendingQuestions";
+import { addPendingQuestion, markAskActive, markAskInactive, pollForAnswer } from "./pendingQuestions";
 
 /** Everything a tool handler needs that ISN'T part of the model-visible input — closed over per row. */
 export interface ToolContext {
@@ -122,7 +122,10 @@ export const TOOLS: ToolDefinition[] = [
         whyThem: { type: "string" },
         sourceType: { type: "string" },
         sourceLink: { type: "string" },
-        warmLead: { type: "string", enum: ["Y", "Unknown"] },
+        warmLead: {
+          type: "boolean",
+          description: "The Warm Lead? column is a real checkbox: pass true only if this row's context shows a genuine warm connection / prior relationship (e.g. a past-sponsor/partner history or a named path in), false otherwise. Do not guess true.",
+        },
         warmLeadPath: { type: "string" },
         notes: { type: "string" },
         sourceText: { type: "string", description: "The original Staging Source (col F) label — used only to cache this Source Type decision, never written to any cell." },
@@ -141,6 +144,12 @@ export const TOOLS: ToolDefinition[] = [
       }
       const master = await readMasterPromotionIndex();
       const rowNumber = nextMasterRowNumber(master);
+      // col K is a real checkbox — coerce to an actual boolean so a stray
+      // "true"/"Y"/"yes" string from the model still writes a real TRUE, never
+      // text that would trip the checkbox validation.
+      const warmLead =
+        input.warmLead === true ||
+        /^(true|y|yes)$/i.test(String(input.warmLead ?? "").trim());
       await appendMasterRow(
         {
           organizationName: input.organizationName,
@@ -149,7 +158,7 @@ export const TOOLS: ToolDefinition[] = [
           whyThem: input.whyThem,
           sourceType: input.sourceType,
           sourceLink: input.sourceLink,
-          warmLead: input.warmLead,
+          warmLead,
           warmLeadPath: input.warmLeadPath,
           notes: input.notes,
         },
@@ -210,14 +219,23 @@ export const TOOLS: ToolDefinition[] = [
         askedAt: new Date().toISOString(),
       });
 
-      const pollIntervalMs = ctx.askPollIntervalMs ?? 5000;
-      const deadline = Date.now() + ctx.askTimeoutMs;
-      while (Date.now() < deadline) {
-        const answer = pollForAnswer(pending.id);
-        if (answer !== undefined) return { answered: true, answer };
-        await sleep(Math.min(pollIntervalMs, Math.max(deadline - Date.now(), 0)));
+      // Mark this ask as actively awaited in-run so the out-of-thread resume
+      // listener (index.ts) leaves the reply to this poll instead of also
+      // spawning a second loop for the same row (double-processing race fixed
+      // 2026-07-06). Always cleared, even on an early return/throw.
+      markAskActive(pending.id);
+      try {
+        const pollIntervalMs = ctx.askPollIntervalMs ?? 5000;
+        const deadline = Date.now() + ctx.askTimeoutMs;
+        while (Date.now() < deadline) {
+          const answer = pollForAnswer(pending.id);
+          if (answer !== undefined) return { answered: true, answer };
+          await sleep(Math.min(pollIntervalMs, Math.max(deadline - Date.now(), 0)));
+        }
+        return { answered: false };
+      } finally {
+        markAskInactive(pending.id);
       }
-      return { answered: false };
     },
   },
 ];

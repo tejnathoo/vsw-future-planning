@@ -118,7 +118,7 @@ export interface MasterRow {
   whyThem: string; // F
   sourceType: SourceType; // I
   sourceLink: string; // J
-  warmLead: "Y" | "Unknown"; // K
+  warmLead: boolean; // K — a real checkbox in the sheet (TRUE/FALSE), not "Y"/"Unknown" text
   warmLeadPath: string; // M
   notes: string; // AF
 }

@@ -107,12 +107,36 @@ describe("runRowAgent — 'held' requires actually asking (bug fix 2026-07-05)",
   });
 });
 
-describe("runRowAgent — tool-call budget (default 6 per row, PRD §11.7)", () => {
+describe("runRowAgent — tool-call budget (default 10 per row, PRD §11.7; raised from 6 for the mandatory research pass, 2026-07-06)", () => {
   it("holds the row if the budget is exhausted before any write ever happens", async () => {
     anthropicMocks.create.mockImplementation(() => Promise.resolve(toolUseResponse("noop_tool", `t${Math.random()}`)));
     const result = await runRowAgent(row(), baseCtx as any);
     expect(result.outcome).toBe("held");
-    expect(noopHandler).toHaveBeenCalledTimes(6); // capped, never a 7th
+    expect(noopHandler).toHaveBeenCalledTimes(10); // capped, never an 11th
+  });
+
+  it("does NOT count time spent waiting on a Tej reply against the wall-clock budget (bug fix 2026-07-06)", async () => {
+    // Simulate a human taking 5 minutes to reply — far beyond the 180s wall
+    // clock. Before the fix, the loop tripped 'over budget' the instant the
+    // answer arrived and held the row, silently discarding the reply.
+    let now = 1_000_000;
+    const dateSpy = vi.spyOn(Date, "now").mockImplementation(() => now);
+    askHandler.mockImplementationOnce(async () => {
+      now += 300_000; // 5 min of human think-time elapses inside the ask
+      return { answered: true, answer: "treat it as net-new" };
+    });
+    anthropicMocks.create
+      .mockResolvedValueOnce(toolUseResponse("ask_tej_on_slack", "t1", { question: "net-new?" }))
+      .mockResolvedValueOnce(toolUseResponse("append_master_row", "t2"))
+      .mockResolvedValueOnce(toolUseResponse("flip_staging_review_status", "t3"))
+      .mockResolvedValueOnce(finalResponse("added", "Appended as net-new after Tej confirmed."));
+
+    const result = await runRowAgent(row(), baseCtx as any);
+    dateSpy.mockRestore();
+
+    expect(result.outcome).toBe("added"); // would be "held" if the wait counted against budget
+    expect(appendHandler).toHaveBeenCalledTimes(1);
+    expect(result.askCalled).toBe(true);
   });
 
   it("still allows flip_staging_review_status one extra time right after a successful write, even over budget", async () => {

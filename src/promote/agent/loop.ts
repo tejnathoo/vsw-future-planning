@@ -3,8 +3,13 @@ import type { StagingApprovedRow } from "../../types";
 import { buildSystemPrompt } from "./systemPrompt";
 import { TOOLS, type ToolContext } from "./tools";
 
-const MAX_TOOL_CALLS = 6;
-const WALL_CLOCK_BUDGET_MS = 90_000;
+// Raised 2026-07-06 from 6 / 90s: every row now does a mandatory Firecrawl
+// research pass (search + often a scrape) before writing Why Them, so the old
+// budget — sized for a write-only loop — would trip nearly every row into a
+// false "held — budget". Firecrawl calls are also seconds each, hence the
+// wider wall clock. The MAX_LOOP_ITERATIONS safety net below is unchanged.
+const MAX_TOOL_CALLS = 10;
+const WALL_CLOCK_BUDGET_MS = 180_000;
 const ASK_TEJ_TIMEOUT_MS = 5 * 60_000;
 /** Absolute safety net independent of the time/tool budgets — should never be hit in practice. */
 const MAX_LOOP_ITERATIONS = 20;
@@ -88,10 +93,17 @@ export async function runRowAgent(
   let flipGraceUsed = false;
   let askCalled = false;
   let heldWithoutAskingNudgeUsed = false;
+  // Time spent *inside* ask_tej_on_slack waiting on a human reply. Excluded from
+  // the wall-clock budget below (bug fixed 2026-07-06): otherwise a row that
+  // asked Tej a question and got an answer ~1 min later would immediately trip
+  // "over budget" on the very next iteration and be held as "budget exceeded",
+  // silently throwing away the answer it just received. Human think-time is not
+  // the agent's compute budget.
+  let askWaitMs = 0;
   const startedAt = Date.now();
 
   for (let iteration = 0; iteration < MAX_LOOP_ITERATIONS; iteration++) {
-    const elapsed = Date.now() - startedAt;
+    const elapsed = Date.now() - startedAt - askWaitMs;
     const overBudget = toolCallCount >= MAX_TOOL_CALLS || elapsed >= WALL_CLOCK_BUDGET_MS;
     if (overBudget) {
       if (masterWriteSucceeded && flipCalled) {
@@ -115,7 +127,7 @@ export async function runRowAgent(
 
     const response = await anthropic.messages.create({
       model,
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: buildSystemPrompt(),
       messages,
       tools: anthropicTools,
@@ -173,10 +185,16 @@ export async function runRowAgent(
         continue;
       }
       try {
+        const handlerStart = Date.now();
         const result = await def.handler(block.input, toolCtx);
         if (block.name === "append_master_row" || block.name === "update_master_aggregate_row") masterWriteSucceeded = true;
         if (block.name === "flip_staging_review_status") flipCalled = true;
-        if (block.name === "ask_tej_on_slack") askCalled = true;
+        if (block.name === "ask_tej_on_slack") {
+          askCalled = true;
+          // The vast majority of this call is blocking on a human reply — don't
+          // charge that wait to the wall-clock budget (see askWaitMs above).
+          askWaitMs += Date.now() - handlerStart;
+        }
         console.log(`[promotion agent] ${row.organization}: ${block.name}(${JSON.stringify(block.input).slice(0, 200)}) -> ${JSON.stringify(result).slice(0, 200)}`);
         transcript.push(`tool: ${block.name}(${JSON.stringify(block.input)}) -> ${JSON.stringify(result).slice(0, 300)}`);
         toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });

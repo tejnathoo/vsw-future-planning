@@ -70,3 +70,25 @@ export function resolvePendingQuestion(id: string, answer: string): void {
 export function pollForAnswer(id: string): string | undefined {
   return findById(id)?.answer;
 }
+
+/**
+ * In-memory set of questions whose `ask_tej_on_slack` call is *right now* still
+ * blocking inside a live run, waiting on a reply (added 2026-07-06). This is
+ * deliberately in-process, not persisted: it exists only to stop the SAME reply
+ * from being handled twice — once by the in-run poll that's already waiting, and
+ * once by index.ts's out-of-thread `message`/`app_mention` resume listener. The
+ * bot runs as a single Socket-Mode worker, so both live in this one process. If
+ * an ask is still active, the in-run loop owns the reply (its poll will pick up
+ * the stored answer); the listener only resumes rows whose run already moved on.
+ * A process restart correctly clears this — any then-in-flight run is gone too.
+ */
+const activeAsks = new Set<string>();
+export function markAskActive(id: string): void {
+  activeAsks.add(id);
+}
+export function markAskInactive(id: string): void {
+  activeAsks.delete(id);
+}
+export function isAskActive(id: string): boolean {
+  return activeAsks.has(id);
+}

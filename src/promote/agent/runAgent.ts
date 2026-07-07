@@ -154,18 +154,33 @@ export async function runPromotionAgent(
  * summary — technically true from the model's point of view, since it was
  * handed an empty string even though Tej had just replied with real guidance.
  */
+export type ResumeResult =
+  | { status: "ran"; outcome: RowOutcome }
+  | { status: "already-promoted" } // row already flipped to Merged-to-Master — the answer isn't needed, it's done
+  | { status: "not-actionable"; reviewStatus: string } // exists but in some other non-Approved state
+  | { status: "gone" }; // row no longer found at that number at all
+
 export async function resumePendingRow(
   pending: PendingQuestion,
   answer: string,
   slackClient: SlackClient
-): Promise<RowOutcome | null> {
+): Promise<ResumeResult> {
   const staging = await readStagingApprovedRows();
   const row = staging.find((r: StagingApprovedRow) => r.rowNumber === pending.stagingRowNumber);
-  if (!row || row.reviewStatus !== "Approved") return null;
+  if (!row) return { status: "gone" };
+  if (row.reviewStatus !== "Approved") {
+    // Most common reason this fires: the row was already promoted (in this same
+    // run, or by an earlier reply) and flipped to Merged-to-Master — that's a
+    // success, not a "leaving it alone." Report it honestly.
+    return row.reviewStatus === "Merged-to-Master"
+      ? { status: "already-promoted" }
+      : { status: "not-actionable", reviewStatus: row.reviewStatus };
+  }
 
-  return runRowAgent(
+  const outcome = await runRowAgent(
     row,
     { organization: row.organization, stagingRowNumber: row.rowNumber, channel: pending.channel, threadTs: pending.threadTs, slackClient },
     { question: pending.question, answer }
   );
+  return { status: "ran", outcome };
 }

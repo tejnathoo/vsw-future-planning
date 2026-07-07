@@ -11,7 +11,7 @@ import { processItems } from "./pipeline";
 import { answerQuestion } from "./chat/answerQuestion";
 import { runPromotionAgent, resumePendingRow } from "./promote/agent/runAgent";
 import { appendSourceTypeToDropdown, stagingSheetLink } from "./sheets";
-import { findUnresolvedByThread, resolvePendingQuestion } from "./promote/agent/pendingQuestions";
+import { findUnresolvedByThread, isAskActive, resolvePendingQuestion } from "./promote/agent/pendingQuestions";
 import { detectRoute, stripUrls, type SlackFile } from "./router";
 import { downloadSlackFile } from "./slack/download";
 import { bulletMessage } from "./slack/reply";
@@ -51,15 +51,39 @@ async function tryResumePendingQuestion(threadTs: string, answerText: string, sa
   const pending = findUnresolvedByThread(threadTs);
   if (!pending) return false;
 
+  // Store the answer first, always — this is what the in-run poll (if one is
+  // still waiting) reads to pick the row back up itself.
   resolvePendingQuestion(pending.id, answerText);
+
+  // If that question's ask_tej_on_slack is STILL blocking inside a live run,
+  // let that in-run loop own the reply (its poll will now see the answer and
+  // finish the row, reporting it in the run summary). Starting a second loop
+  // here would double-process the row and race to write/flip it — the exact
+  // bug behind the confusing "isn't Approved anymore" reply (2026-07-06 fix).
+  if (isAskActive(pending.id)) {
+    await say({ text: `Got it — I'm still working that run, folding your answer into ${pending.organization} now.`, thread_ts: threadTs });
+    return true;
+  }
+
   try {
-    const outcome = await resumePendingRow(pending, answerText, app.client);
-    if (!outcome) {
-      await say({ text: `Thanks — but that Staging row isn't Approved anymore, so I'm leaving it alone.`, thread_ts: threadTs });
-      return true;
+    const result = await resumePendingRow(pending, answerText, app.client);
+    switch (result.status) {
+      case "ran": {
+        const o = result.outcome;
+        const emoji = o.outcome === "added" || o.outcome === "merged" ? "✅" : o.outcome === "held" ? "🤔" : "❌";
+        await say({ text: `${emoji} ${pending.organization}: ${o.detail}`, thread_ts: threadTs });
+        break;
+      }
+      case "already-promoted":
+        await say({ text: `✅ ${pending.organization} was already promoted to Master — you're all set, nothing more needed here.`, thread_ts: threadTs });
+        break;
+      case "not-actionable":
+        await say({ text: `Thanks — but ${pending.organization}'s Staging row is now "${result.reviewStatus}", not Approved, so I'll leave it as-is.`, thread_ts: threadTs });
+        break;
+      case "gone":
+        await say({ text: `Thanks — but I can't find that Staging row anymore (it may have been removed), so there's nothing for me to promote.`, thread_ts: threadTs });
+        break;
     }
-    const emoji = outcome.outcome === "added" || outcome.outcome === "merged" ? "✅" : outcome.outcome === "held" ? "🤔" : "❌";
-    await say({ text: `${emoji} ${pending.organization}: ${outcome.detail}`, thread_ts: threadTs });
   } catch (e: any) {
     console.error("[resume pending question] failed:", e.message);
     await say({ text: `Ran into a snag picking that back up: ${e.message}`, thread_ts: threadTs });

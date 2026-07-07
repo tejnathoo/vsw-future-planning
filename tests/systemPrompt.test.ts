@@ -31,4 +31,14 @@ describe("buildSystemPrompt — the rules live in context, not external branchin
   it("tells the model not to report 'held' without actually asking Tej something (bug fix 2026-07-05)", () => {
     expect(prompt.toLowerCase()).toMatch(/always call ask_tej_on_slack first/);
   });
+
+  it("requires Firecrawl research on every row to enrich Why Them (2026-07-06)", () => {
+    expect(prompt.toLowerCase()).toMatch(/for every row/);
+    expect(prompt.toLowerCase()).toMatch(/before writing why them/);
+    expect(prompt.toLowerCase()).toMatch(/fit for vsw/);
+  });
+
+  it("states the Warm Lead? checkbox is boolean-only and not inferred from fame", () => {
+    expect(prompt.toLowerCase()).toMatch(/warm lead\?.*checkbox|checkbox.*warm lead/);
+  });
 });
