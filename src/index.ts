@@ -17,6 +17,7 @@ import { detectRoute, stripUrls, type SlackFile } from "./router";
 import { downloadSlackFile } from "./slack/download";
 import { bulletMessage } from "./slack/reply";
 import { scrapedAtNow } from "./time";
+import { recordSlackMessage } from "./threadLog/notionThreadLog";
 
 assertRequiredEnv();
 
@@ -454,6 +455,34 @@ app.message(async ({ message, say }) => {
   // `tryResumePendingQuestion` itself — skip here so it isn't handled twice.
   if (botUserId && (m.text || "").includes(`<@${botUserId}>`)) return;
   await tryResumePendingQuestion(m.thread_ts, m.text || "", say);
+});
+
+// Live mirror of #vsw-future-planning into the "Thread with Andrew" Notion
+// page (Tej, 2026-07-13) — every human message and thread reply in that
+// channel gets appended, newest at the top. Independent of the promotion/
+// contact bot logic above; just an always-on passive log for one channel.
+// Requires the `message.channels` Event Subscription + `channels:history`
+// scope (same one the pending-question resume listener above needs) and the
+// bot to be invited into that channel — see AGENTS.md §Setup.
+app.message(async ({ message }) => {
+  const m = message as any;
+  const channelId = process.env.VSW_FUTURE_PLANNING_CHANNEL_ID;
+  if (!channelId || m.channel !== channelId) return;
+  if (m.subtype || m.bot_id || !m.user || !m.ts) return;
+  try {
+    await recordSlackMessage(
+      {
+        ts: m.ts,
+        threadTs: m.thread_ts,
+        userId: m.user,
+        text: m.text || "",
+        fileNames: Array.isArray(m.files) ? m.files.map((f: any) => f.name).filter(Boolean) : undefined,
+      },
+      app.client
+    );
+  } catch (e: any) {
+    console.error("[thread-log] failed to record message to Notion:", e.message);
+  }
 });
 
 app.error(async (error) => {
