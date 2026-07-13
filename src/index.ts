@@ -467,6 +467,12 @@ app.message(async ({ message, say }) => {
 app.message(async ({ message }) => {
   const m = message as any;
   const channelId = process.env.VSW_FUTURE_PLANNING_CHANNEL_ID;
+  // Temporary diagnostic (2026-07-14) — this listener has no success-path log,
+  // so total silence in Railway logs was ambiguous (never received vs. quietly
+  // filtered/succeeded). Logging every raw event received, unconditionally,
+  // until we've confirmed events for VSW_FUTURE_PLANNING_CHANNEL_ID actually
+  // arrive at all. Remove once confirmed working.
+  console.log(`[thread-log] message event received: channel=${m.channel} configured=${channelId} subtype=${m.subtype} bot_id=${m.bot_id} user=${m.user} ts=${m.ts}`);
   if (!channelId || m.channel !== channelId) return;
   if (m.subtype || m.bot_id || !m.user || !m.ts) return;
   try {
@@ -480,6 +486,7 @@ app.message(async ({ message }) => {
       },
       app.client
     );
+    console.log(`[thread-log] recorded ts=${m.ts} to Notion OK`);
   } catch (e: any) {
     console.error("[thread-log] failed to record message to Notion:", e.message);
   }
