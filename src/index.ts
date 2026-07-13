@@ -461,18 +461,14 @@ app.message(async ({ message, say }) => {
 // page (Tej, 2026-07-13) — every human message and thread reply in that
 // channel gets appended, newest at the top. Independent of the promotion/
 // contact bot logic above; just an always-on passive log for one channel.
-// Requires the `message.channels` Event Subscription + `channels:history`
-// scope (same one the pending-question resume listener above needs) and the
-// bot to be invited into that channel — see AGENTS.md §Setup.
+// #vsw-future-planning is a PRIVATE channel, so this needs the `message.groups`
+// Event Subscription + `groups:history` scope — NOT `message.channels`/
+// `channels:history`, which only cover public channels and were the wrong pair
+// initially assumed here (see PLAN.md's 2026-07-14 Execution Log entry for how
+// that was diagnosed). Also needs the bot invited into the channel.
 app.message(async ({ message }) => {
   const m = message as any;
   const channelId = process.env.VSW_FUTURE_PLANNING_CHANNEL_ID;
-  // Temporary diagnostic (2026-07-14) — this listener has no success-path log,
-  // so total silence in Railway logs was ambiguous (never received vs. quietly
-  // filtered/succeeded). Logging every raw event received, unconditionally,
-  // until we've confirmed events for VSW_FUTURE_PLANNING_CHANNEL_ID actually
-  // arrive at all. Remove once confirmed working.
-  console.log(`[thread-log] message event received: channel=${m.channel} configured=${channelId} subtype=${m.subtype} bot_id=${m.bot_id} user=${m.user} ts=${m.ts}`);
   if (!channelId || m.channel !== channelId) return;
   if (m.subtype || m.bot_id || !m.user || !m.ts) return;
   try {
