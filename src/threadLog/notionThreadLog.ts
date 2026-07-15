@@ -44,13 +44,16 @@ async function notionFetch(path: string, init: RequestInit): Promise<any> {
   return res.json();
 }
 
-// ---- persisted state: Slack root message ts -> Notion insertion anchor ----
+// ---- persisted state: Slack root message ts -> Notion thread bookkeeping ----
+
+interface ThreadState {
+  calloutBlockId: string; // the root message's own callout block
+  toggleBlockId: string | null; // created lazily on the first reply
+  replyCount: number;
+}
 
 interface ThreadLogState {
-  // keyed by the *thread root* ts; value is the block id to insert the next
-  // reply after (starts as the root's own callout block, advances to each
-  // new reply's callout block as replies arrive, so replies stack in order).
-  [rootTs: string]: string;
+  [rootTs: string]: ThreadState;
 }
 
 function statePath(): string {
@@ -126,6 +129,23 @@ function dividerBlock(): any {
   return { object: "block", type: "divider", divider: {} };
 }
 
+function threadToggleBlock(replyCount: number): any {
+  return {
+    object: "block",
+    type: "toggle",
+    toggle: { rich_text: [{ type: "text", text: { content: `🧵 ${replyCount} ${replyCount === 1 ? "reply" : "replies"}` } }] },
+  };
+}
+
+async function renameToggle(toggleId: string, replyCount: number): Promise<void> {
+  await notionFetch(`/blocks/${toggleId}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      toggle: { rich_text: [{ type: "text", text: { content: `🧵 ${replyCount} ${replyCount === 1 ? "reply" : "replies"}` } }] },
+    }),
+  });
+}
+
 // ---- Slack user display-name lookup (fallback for unmapped users) ----
 
 const nameCache = new Map<string, string>();
@@ -178,6 +198,11 @@ export async function recordSlackMessage(msg: SlackMessageForLog, slackClient: a
     // most-recently-sent message ends up closest to the top, newest-first —
     // the existing divider that used to follow the marker rides along after
     // our new blocks, so we only need to add our own divider *before* them.
+    // Top-level entries are each anchored by their OWN send time this way, so
+    // the main flow of the page stays strictly chronological on its own —
+    // replies live inside a collapsed toggle (below) instead of inline, so a
+    // long-running thread's later replies never push older entries around or
+    // get buried under newer unrelated messages.
     const marker = await findMarkerBlockId();
     const inserted = await notionFetch(`/blocks/${pageId()}/children`, {
       method: "PATCH",
@@ -185,18 +210,20 @@ export async function recordSlackMessage(msg: SlackMessageForLog, slackClient: a
     });
     const calloutBlockId = inserted.results[2].id;
     const state = readState();
-    state[rootTs] = calloutBlockId;
+    state[rootTs] = { calloutBlockId, toggleBlockId: null, replyCount: 0 };
     writeState(state);
     return;
   }
 
-  // Reply: nest directly under the last block recorded for this thread
-  // (initially the root message's own callout, then each subsequent reply),
-  // so a multi-reply thread reads top-to-bottom in the order it happened —
-  // matching the page's existing "↳ reply" convention.
+  // Reply: goes inside a collapsed "🧵 N replies" toggle directly under the
+  // root message's callout, created lazily on the first reply. Every later
+  // reply is appended as a child of that same toggle (Notion's default
+  // append-to-end behavior on /children with no `after` keeps them in the
+  // order they arrived), so the toggle's position never has to move even as
+  // new replies keep coming in hours after unrelated newer messages arrived.
   const state = readState();
-  let anchor = state[rootTs];
-  if (!anchor) {
+  const thread = state[rootTs];
+  if (!thread) {
     // Root predates this automation (or state was lost on redeploy) — fall
     // back to logging it as a new top-level entry rather than dropping it.
     const marker = await findMarkerBlockId();
@@ -204,15 +231,25 @@ export async function recordSlackMessage(msg: SlackMessageForLog, slackClient: a
       method: "PATCH",
       body: JSON.stringify({ children: [dividerBlock(), dateBlock, callout], after: marker }),
     });
-    anchor = inserted.results[2].id;
-    state[rootTs] = anchor;
+    state[rootTs] = { calloutBlockId: inserted.results[2].id, toggleBlockId: null, replyCount: 0 };
     writeState(state);
     return;
   }
-  const inserted = await notionFetch(`/blocks/${pageId()}/children`, {
+
+  thread.replyCount += 1;
+  if (!thread.toggleBlockId) {
+    const toggleInserted = await notionFetch(`/blocks/${pageId()}/children`, {
+      method: "PATCH",
+      body: JSON.stringify({ children: [threadToggleBlock(thread.replyCount)], after: thread.calloutBlockId }),
+    });
+    thread.toggleBlockId = toggleInserted.results[0].id;
+  } else {
+    await renameToggle(thread.toggleBlockId, thread.replyCount);
+  }
+  await notionFetch(`/blocks/${thread.toggleBlockId}/children`, {
     method: "PATCH",
-    body: JSON.stringify({ children: [dateBlock, callout], after: anchor }),
+    body: JSON.stringify({ children: [dateBlock, callout] }),
   });
-  state[rootTs] = inserted.results[1].id;
+  state[rootTs] = thread;
   writeState(state);
 }
