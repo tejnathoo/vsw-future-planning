@@ -70,7 +70,7 @@ export interface MasterPromotionEntry {
   organization: string; // col B, "Organization Name"
   orgKey: string; // derived via orgKey()
   whyThem: string; // col F, "Why Them"
-  sourceLink: string; // col J, "Source Link" (pipe-joined string as stored)
+  sourceLink: string; // col AN, "Source Link" (moved from J on 2026-07-14, pipe-joined string as stored)
 }
 
 /** The Source Type enum, live on the master-prospects "Source Type" dropdown (PRD §10.6 Q3). */

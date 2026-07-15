@@ -93,15 +93,18 @@ export async function readMasterIndex(): Promise<MasterIndexEntry[]> {
 
 /**
  * Read fresh Master for the Promotion feature (PRD §10.3/§10.4) — needs row
- * numbers plus Why Them (F) and Source Link (J) for Path B matching + append,
- * where `readMasterIndex` only pulls col B. Data starts at row 3 (header row 2).
- * Reuses `orgKey()` from dedup so the match key is derived identically to Staging.
+ * numbers plus Why Them (G) and Source Link (AQ) for Path B matching + append,
+ * where `readMasterIndex` only pulls col B. Data starts at row 3 (header row
+ * 2). Reuses `orgKey()` from dedup so the match key is derived identically to
+ * Staging. Column letters here are re-verified against a live header read
+ * whenever the sheet's structure changes — see `MASTER_FIELD_COLUMNS`'s
+ * comment and PLAN.md's Execution Log for why these aren't stable.
  */
 export async function readMasterPromotionIndex(): Promise<MasterPromotionEntry[]> {
   const startRow = masterHeaderRow() + 1;
   const res = await getSheets().spreadsheets.values.get({
     spreadsheetId: spreadsheetId(),
-    range: `${masterTab()}!B${startRow}:J`,
+    range: `${masterTab()}!B${startRow}:AQ`,
   });
   const rows = res.data.values || [];
   return rows
@@ -111,8 +114,8 @@ export async function readMasterPromotionIndex(): Promise<MasterPromotionEntry[]
         rowNumber: i + startRow,
         organization,
         orgKey: orgKey(organization),
-        whyThem: row[4] || "", // col F (B is index 0 → F is index 4)
-        sourceLink: row[8] || "", // col J
+        whyThem: row[5] || "", // col G (B is index 0 → G is index 5)
+        sourceLink: row[41] || "", // col AQ (B is index 0 → AQ is index 41)
       };
     })
     .filter((e) => e.organization);
@@ -174,49 +177,58 @@ export function nextMasterRowNumber(index: MasterPromotionEntry[]): number {
  * Write ONE new master-prospects row at an explicit, caller-computed row number
  * (Path A, PRD §10.5) — a targeted `values.update`, not `values.append`, so
  * placement is deterministic rather than guessed (see `nextMasterRowNumber`).
- * Writes columns B-AF, populating only B/C/D/F/I/J/K/M/AF — every other column
- * blank; col A (Prospect ID) is left untouched. This is the ONLY sanctioned way
- * to add a Master row (AGENTS.md golden rule #1 carve-out).
+ * Writes columns B-BN, populating only B/D/E/G/AP/AQ/AR/AS/BN — every other
+ * column blank (incl. the VSW/Past-VSW-Event-Partner/30 sponsored-events
+ * checkboxes, populated separately, not by this path); col A (Prospect ID) is
+ * left untouched. This is the ONLY sanctioned way to add a Master row
+ * (AGENTS.md golden rule #1 carve-out).
+ *
+ * Column letters here are NOT stable — see `MASTER_FIELD_COLUMNS`'s comment
+ * and PLAN.md's Execution Log for the shift history; re-verify against a live
+ * header read before trusting this layout.
  */
 export async function appendMasterRow(row: MasterRow, rowNumber: number): Promise<void> {
   const values = [[
     row.organizationName, // B
-    row.category, // C
-    row.subsector, // D
-    "", // E HQ / Geography
-    row.whyThem, // F
-    "", // G Potential Mutual Value
-    "", // H Programming Angle
-    row.sourceType, // I
-    row.sourceLink, // J
-    row.warmLead, // K Warm Lead?
-    "", // L Warm Lead Person
-    row.warmLeadPath, // M
-    "", // N Primary Contact Name
-    "", // O Title
-    "", // P Email
-    "", // Q LinkedIn URL
-    "", // R Secondary Contact Name
-    "", // S Secondary Contact Title
-    "", // T Secondary Contact LinkedIn
-    "", // U Secondary Contact Email
-    "", // V Generic Intake Email
-    "", // W Stage
-    "", // X Last Touch Date
-    "", // Y Last Touch Channel
-    "", // Z Next Step
-    "", // AA Next Follow-up Date
-    "", // AB Owner
-    "", // AC Funding Type
-    "", // AD Estimated Capacity
-    "", // AE Target Ask Range
-    "", // AF Exclusivity Play? (Y/N/Unknown)
-    "", // AG Budget Window
-    row.notes, // AH
+    "", // C Warm Lead Person
+    row.category, // D
+    row.subsector, // E
+    "", // F HQ / Geography
+    row.whyThem, // G
+    "", // H Potential Mutual Value
+    "", // I Programming Angle
+    "", // J VSW (checkbox)
+    "", // K Past VSW Event Partner (checkbox)
+    ...new Array(30).fill(""), // L-AO: 30 sponsored-events checkboxes
+    row.sourceType, // AP
+    row.sourceLink, // AQ
+    row.warmLead, // AR Warm Lead?
+    row.warmLeadPath, // AS
+    "", // AT Primary Contact Name
+    "", // AU Title
+    "", // AV Email
+    "", // AW LinkedIn URL
+    "", // AX Secondary Contact Name
+    "", // AY Secondary Contact Title
+    "", // AZ Secondary Contact LinkedIn
+    "", // BA Secondary Contact Email
+    "", // BB Generic Intake Email
+    "", // BC Stage
+    "", // BD Last Touch Date
+    "", // BE Last Touch Channel
+    "", // BF Next Step
+    "", // BG Next Follow-up Date
+    "", // BH Owner
+    "", // BI Funding Type
+    "", // BJ Estimated Capacity
+    "", // BK Target Ask Range
+    "", // BL Exclusivity Play? (Y/N/Unknown)
+    "", // BM Budget Window
+    row.notes, // BN
   ]];
   await getSheets().spreadsheets.values.update({
     spreadsheetId: spreadsheetId(),
-    range: `${masterTab()}!B${rowNumber}:AH${rowNumber}`,
+    range: `${masterTab()}!B${rowNumber}:BN${rowNumber}`,
     valueInputOption: "RAW",
     requestBody: { values },
   });
@@ -238,11 +250,13 @@ export function appendAggregate(existing: string, addition: string): string {
 }
 
 /**
- * Path B aggregation (PRD §10.4): batch-update ONLY column F (Why Them) and
- * column J (Source Link) on an existing Master row. Never touches any other
- * column, ever (AGENTS.md golden rule #1 carve-out boundary). Callers pass the
- * full new cell values (already run through `appendAggregate`). Mirrors
- * `mergeStagingRows`'s `values.batchUpdate` pattern.
+ * Path B aggregation (PRD §10.4): batch-update ONLY column G (Why Them) and
+ * column AO (Source Link) on an existing Master row — letters re-verified
+ * against a live header read, see `MASTER_FIELD_COLUMNS`'s comment. Never
+ * touches any other column, ever (AGENTS.md golden rule #1 carve-out
+ * boundary). Callers pass the full new cell values (already run through
+ * `appendAggregate`). Mirrors `mergeStagingRows`'s `values.batchUpdate`
+ * pattern.
  */
 export async function updateMasterAggregateRow(
   rowNumber: number,
@@ -255,8 +269,8 @@ export async function updateMasterAggregateRow(
     requestBody: {
       valueInputOption: "RAW",
       data: [
-        { range: `${tab}!F${rowNumber}`, values: [[whyThem]] },
-        { range: `${tab}!J${rowNumber}`, values: [[sourceLink]] },
+        { range: `${tab}!G${rowNumber}`, values: [[whyThem]] },
+        { range: `${tab}!AQ${rowNumber}`, values: [[sourceLink]] },
       ],
     },
   });
@@ -280,18 +294,21 @@ export async function markStagingMergedToMaster(rowNumbers: number[]): Promise<v
 }
 
 /**
- * Live Source Type dropdown values (master-prospects col I) — read fresh every
- * call, never hardcoded/cached (PRD §11.4). This is what lets a Tej-approved
- * addition "just work" on the next run with no code change. Reads the
- * dataValidation rule off row 3 (first data row) and trusts it's uniform down
- * the column, same technique used in the 2026-07-04 dry run that found only 3
- * values were actually live despite 4 being discussed.
+ * Live Source Type dropdown values (master-prospects col AN — column letters
+ * here are re-verified against a live header read whenever the sheet's
+ * structure changes, see `MASTER_FIELD_COLUMNS`'s comment and PLAN.md's
+ * Execution Log) — read fresh every call, never hardcoded/cached (PRD §11.4).
+ * This is what lets a Tej-approved addition "just work" on the next run with
+ * no code change. Reads the dataValidation rule off row 3 (first data row)
+ * and trusts it's uniform down the column, same technique used in the
+ * 2026-07-04 dry run that found only 3 values were actually live despite 4
+ * being discussed.
  */
 export async function readSourceTypeDropdown(): Promise<string[]> {
   const startRow = masterHeaderRow() + 1;
   const res = await getSheets().spreadsheets.get({
     spreadsheetId: spreadsheetId(),
-    ranges: [`${masterTab()}!I${startRow}`],
+    ranges: [`${masterTab()}!AP${startRow}`],
     includeGridData: true,
   });
   const cell = res.data.sheets?.[0]?.data?.[0]?.rowData?.[0]?.values?.[0];
@@ -308,7 +325,9 @@ async function getSheetIdByTitle(title: string): Promise<number> {
 }
 
 /**
- * Add a new value to the live Source Type dropdown (master-prospects col I).
+ * Add a new value to the live Source Type dropdown (master-prospects col AN
+ * — see `MASTER_FIELD_COLUMNS`'s comment and PLAN.md's Execution Log for why
+ * this letter isn't stable).
  * **Gated tool (AGENTS.md golden rule #16 / PRD §11.4): only ever called from
  * the `@bot approve <value>` command path — never offered to / callable by the
  * Promotion Agent's own reasoning loop.** Applies over rows 3-342 (the range
@@ -332,8 +351,8 @@ export async function appendSourceTypeToDropdown(newValue: string): Promise<stri
               sheetId,
               startRowIndex: startRow - 1, // 0-indexed
               endRowIndex: 342,
-              startColumnIndex: 8, // col I
-              endColumnIndex: 9,
+              startColumnIndex: 41, // col AP
+              endColumnIndex: 42,
             },
             rule: {
               condition: {
@@ -357,29 +376,30 @@ export async function appendSourceTypeToDropdown(newValue: string): Promise<stri
 }
 
 /**
- * Fresh read of ONE Master row's Why Them (F) + Source Link (J) — used by
+ * Fresh read of ONE Master row's Why Them (G) + Source Link (AO) — used by
  * `update_master_aggregate_row` (PRD §11.4) to re-check current values right
  * before writing, rather than trusting a value the agent read earlier in a
  * multi-row run that might have gone stale (e.g. two Approved rows aggregating
- * onto the same Master org in one sweep).
+ * onto the same Master org in one sweep). Column letters re-verified against
+ * a live header read — see `MASTER_FIELD_COLUMNS`'s comment.
  */
 export async function readMasterRowAggregateFields(rowNumber: number): Promise<{ whyThem: string; sourceLink: string }> {
-  const res = await getSheets().spreadsheets.values.get({
+  const res = await getSheets().spreadsheets.values.batchGet({
     spreadsheetId: spreadsheetId(),
-    range: `${masterTab()}!F${rowNumber}:J${rowNumber}`,
+    ranges: [`${masterTab()}!G${rowNumber}`, `${masterTab()}!AQ${rowNumber}`],
   });
-  const row = res.data.values?.[0] || [];
-  return { whyThem: row[0] || "", sourceLink: row[4] || "" };
+  const [fRange, anRange] = res.data.valueRanges || [];
+  return { whyThem: fRange?.values?.[0]?.[0] || "", sourceLink: anRange?.values?.[0]?.[0] || "" };
 }
 
 /**
- * Fresh read of ONE Master row's contact-related columns — Why Them (F),
- * Primary Contact Name/Title/Email/LinkedIn (N-Q), Secondary Contact
- * Name/Title/LinkedIn/Email (R-U), Generic Intake Email (V), and Notes (AH).
- * Column layout updated 2026-07-08 — Tej added Secondary Contact Title (S)
- * and Secondary Contact Email (U), shifting everything from the old S
- * onward right by two (Secondary LinkedIn S->T, Generic Intake T->V, Notes
- * AF->AH). Used by the contact-attribution feature to decide
+ * Fresh read of ONE Master row's contact-related columns — Why Them (G),
+ * Primary Contact Name/Title/Email/LinkedIn (AR-AU), Secondary Contact
+ * Name/Title/LinkedIn/Email (AV-AY), Generic Intake Email (AZ), and Notes (BL).
+ * Column letters are NOT stable here (Tej edits the sheet's structure
+ * directly and expects this to be re-verified live, not trusted from memory
+ * — see `MASTER_FIELD_COLUMNS`'s comment and PLAN.md's Execution Log for the
+ * full shift history). Used by the contact-attribution feature to decide
  * primary-vs-secondary and to append (not overwrite) Why Them/Notes,
  * re-reading fresh right before writing.
  */
@@ -387,7 +407,7 @@ export async function readMasterContactFields(rowNumber: number): Promise<Master
   const tab = masterTab();
   const res = await getSheets().spreadsheets.values.batchGet({
     spreadsheetId: spreadsheetId(),
-    ranges: [`${tab}!F${rowNumber}`, `${tab}!N${rowNumber}:V${rowNumber}`, `${tab}!AH${rowNumber}`],
+    ranges: [`${tab}!G${rowNumber}`, `${tab}!AT${rowNumber}:BB${rowNumber}`, `${tab}!BN${rowNumber}`],
   });
   const [fRange, nvRange, ahRange] = res.data.valueRanges || [];
   const whyThem = fRange?.values?.[0]?.[0] || "";
@@ -412,25 +432,27 @@ export async function readMasterContactFields(rowNumber: number): Promise<Master
  * Write ONLY the contact-related columns given in `fields` on an existing
  * Master row — a targeted `batchUpdate` per column, exactly mirroring
  * `updateMasterAggregateRow`'s pattern, never a full-row rewrite. This is the
- * ONLY sanctioned way to populate N/O/P/Q/R/S/T/U/V (AGENTS.md golden rule #2
- * carve-out, 2026-07-07; column map updated 2026-07-08) — structurally
- * cannot touch any other column no matter what's passed, since each key maps
- * to exactly one fixed column.
+ * ONLY sanctioned way to populate AR/AS/AT/AU/AV/AW/AX/AY/AZ (AGENTS.md golden
+ * rule #2 carve-out, 2026-07-07; column map updated 2026-07-08, then shifted
+ * +28 again on 2026-07-14 when Tej inserted the "Sponsored Events" checkbox
+ * block after J — see PLAN.md Execution Log) — structurally cannot touch any
+ * other column no matter what's passed, since each key maps to exactly one
+ * fixed column.
  */
 export async function updateMasterContactFields(rowNumber: number, fields: MasterContactFieldUpdates): Promise<void> {
   const tab = masterTab();
   const columnByKey: Record<keyof MasterContactFields, string> = {
-    whyThem: "F",
-    primaryName: "N",
-    primaryTitle: "O",
-    primaryEmail: "P",
-    primaryLinkedin: "Q",
-    secondaryName: "R",
-    secondaryTitle: "S",
-    secondaryLinkedin: "T",
-    secondaryEmail: "U",
-    genericIntakeEmail: "V",
-    notes: "AH",
+    whyThem: "G",
+    primaryName: "AT",
+    primaryTitle: "AU",
+    primaryEmail: "AV",
+    primaryLinkedin: "AW",
+    secondaryName: "AX",
+    secondaryTitle: "AY",
+    secondaryLinkedin: "AZ",
+    secondaryEmail: "BA",
+    genericIntakeEmail: "BB",
+    notes: "BN",
   };
   const data = (Object.entries(fields) as [keyof MasterContactFields, string | undefined][])
     .filter(([, value]) => value !== undefined)
@@ -449,31 +471,46 @@ export async function updateMasterContactFields(rowNumber: number, fields: Maste
  * columns"). Kept as its own explicit map, same defense-in-depth pattern as
  * every other write helper in this file — a field key can only ever resolve
  * to exactly one column.
+ *
+ * Column letters here are NOT stable — Tej edits `master-prospects`'s
+ * structure directly and expects this map to be re-verified against a live
+ * header read whenever a session touches it, not trusted from memory (his
+ * words, 2026-07-15: "I should be able to shift around columns as I please
+ * and you should just be able to detect the changes"). Two shifts happened in
+ * short succession: +28 on 2026-07-14 (the "Sponsored Events" checkbox block
+ * inserted after J), then on 2026-07-15 Tej cut "Warm Lead Person" out of the
+ * warm-lead block and pasted it right after Organization Name (col C) — which
+ * bubbled Category/Subsector/HQ/Why Them/Potential Mutual Value/Programming
+ * Angle/VSW-block/Source Type/Source Link/Warm Lead? each +1, while
+ * everything from Warm Lead Path onward snapped back to its pre-2026-07-14
+ * position (a column move, not a plain insert — see PLAN.md Execution Log
+ * for the full reasoning). Before trusting this map again, re-read
+ * `master-prospects!A2:BN2` live.
  */
 const MASTER_FIELD_COLUMNS: Record<MasterFieldKey, string> = {
   prospectId: "A",
   organizationName: "B",
-  category: "C",
-  subsector: "D",
-  hqGeography: "E",
-  potentialMutualValue: "G",
-  programmingAngle: "H",
-  sourceType: "I",
-  sourceLink: "J",
-  warmLead: "K",
-  warmLeadPerson: "L",
-  warmLeadPath: "M",
-  stage: "W",
-  lastTouchDate: "X",
-  lastTouchChannel: "Y",
-  nextStep: "Z",
-  nextFollowUpDate: "AA",
-  owner: "AB",
-  fundingType: "AC",
-  estimatedCapacity: "AD",
-  targetAskRange: "AE",
-  exclusivityPlay: "AF",
-  budgetWindow: "AG",
+  category: "D",
+  subsector: "E",
+  hqGeography: "F",
+  potentialMutualValue: "H",
+  programmingAngle: "I",
+  sourceType: "AP",
+  sourceLink: "AQ",
+  warmLead: "AR",
+  warmLeadPerson: "C",
+  warmLeadPath: "AS",
+  stage: "BC",
+  lastTouchDate: "BD",
+  lastTouchChannel: "BE",
+  nextStep: "BF",
+  nextFollowUpDate: "BG",
+  owner: "BH",
+  fundingType: "BI",
+  estimatedCapacity: "BJ",
+  targetAskRange: "BK",
+  exclusivityPlay: "BL",
+  budgetWindow: "BM",
 };
 
 /** true/false/y/yes/warm -> real boolean text for a checkbox column (mirrors append_master_row's warmLead coercion). */
