@@ -18,6 +18,7 @@ import { downloadSlackFile } from "./slack/download";
 import { bulletMessage } from "./slack/reply";
 import { scrapedAtNow } from "./time";
 import { recordSlackMessage } from "./threadLog/notionThreadLog";
+import { startCalcomWebhookServer } from "./calcom/server";
 
 assertRequiredEnv();
 
@@ -526,5 +527,6 @@ function scheduleNightlyPromotion() {
   botUserId = auth.user_id as string;
   await app.start();
   scheduleNightlyPromotion();
+  startCalcomWebhookServer(app.client);
   console.log(`⚡️ VSW Slack Intake Service is running (Socket Mode) as ${botUserId}`);
 })();

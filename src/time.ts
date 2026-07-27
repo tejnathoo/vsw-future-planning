@@ -33,6 +33,24 @@ export function runId(sourceSlug: string, now: Date = new Date()): string {
   return `${p.year}${p.month}${p.day}-${p.hour}${p.minute}-${slug}`;
 }
 
+/** Weekday + month + day + 12-hour time, America/Vancouver, e.g. { date: "Wed, Jul 29", time: "8:00 AM" }. */
+export function formatPacific12h(iso: string): { date: string; time: string } {
+  const d = new Date(iso);
+  const date = new Intl.DateTimeFormat("en-US", {
+    timeZone: TZ,
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(d);
+  const time = new Intl.DateTimeFormat("en-US", {
+    timeZone: TZ,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(d).toUpperCase();
+  return { date, time };
+}
+
 /** Scraped At = ISO datetime, America/Vancouver (with explicit offset, not "Z"). */
 export function scrapedAtNow(now: Date = new Date()): string {
   const p = vancouverParts(now);
