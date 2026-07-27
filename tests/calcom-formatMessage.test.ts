@@ -20,7 +20,9 @@ describe("formatBookingMessage", () => {
     expect(msg.blocks[0].text.text).toContain("2:00 PM");
     expect(msg.blocks[0].text.text).toContain("<@U08TKLJH4QL>");
     expect(msg.blocks[0].text.text).not.toContain("—"); // no em dashes (Voice System hard rule)
-    expect(msg.blocks[2].elements[0].text).toBe(`🔗 <${opts.sheetLink}|Open spreadsheet>`);
+    expect(msg.blocks[2].elements[0].text).toBe(
+      `🔗 <${opts.sheetLink}|Open spreadsheet> · 🗓️ <https://calendar.google.com/calendar/r|Open calendar>`
+    );
   });
 
   it("lists name, email, and notes as bullets", () => {

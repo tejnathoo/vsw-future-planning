@@ -6,6 +6,12 @@ export interface BookingMessageOptions {
   sheetLink: string;
 }
 
+// calendar.google.com's canonical URL — Google Calendar handles this as a
+// universal/app link on mobile (opens the native app if installed, falls back
+// to the web view otherwise), so one link covers both cases with no separate
+// mobile/desktop handling needed.
+const GOOGLE_CALENDAR_URL = "https://calendar.google.com/calendar/r";
+
 /**
  * Company + when get top billing (Tej's ask: both visible without opening
  * anything else), everything else reads as a plain list below, and the
@@ -35,7 +41,10 @@ export function formatBookingMessage(booking: ParsedBooking, opts: BookingMessag
     blocks: [
       { type: "section", text: { type: "mrkdwn", text: headline } },
       { type: "section", text: { type: "mrkdwn", text: detailLines.join("\n") } },
-      { type: "context", elements: [{ type: "mrkdwn", text: `🔗 <${opts.sheetLink}|Open spreadsheet>` }] },
+      {
+        type: "context",
+        elements: [{ type: "mrkdwn", text: `🔗 <${opts.sheetLink}|Open spreadsheet> · 🗓️ <${GOOGLE_CALENDAR_URL}|Open calendar>` }],
+      },
     ],
   };
 }
