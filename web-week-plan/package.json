@@ -1,0 +1,9 @@
+{
+  "name": "vsw-week-plan-page",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone static page for twelveoclock.co, separate from the vsw-future-planning Slack intake service.",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

@@ -43,9 +43,17 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
+# === Archived research outputs (consumed, not needed for new sessions) ===
+docs/archive/
+
 # === Local Claude harness settings (keep out of shared repo) ===
 .claude/settings.local.json
 
 # === Promotion Agent runtime state (not decision memory — see src/promote/source-type-cache.json, which IS committed) ===
 state/*.json
 !state/.gitkeep
+
+# === Throwaway session scripts (see CLAUDE.md: write, run with npx tsx, delete) ===
+scratch_*.ts
+*_tmp.ts
+*_tmp.md

@@ -2,7 +2,7 @@
 
 You are building the **VSW Slack Intake Service**: a Node/TypeScript service on Railway that adds a Slack front door (URL / CSV / image) to the existing VSW Sponsor Sourcing pipeline. Read [PRD.md](PRD.md) for what/why and [PLAN.md](PLAN.md) for the phased build. This file is the **how** + the non-negotiable rules.
 
-> **Living docs.** When you make a decision or deviate from spec, update the relevant doc AND append a dated entry to PLAN.md → Execution Log. The Notion Build Brief (`f106a46762d14d7eb5f039dc7cf25f1a`) is the ultimate source of truth; this repo mirrors it.
+> **Living docs.** When you make a decision or deviate from spec, update the relevant doc AND append a dated entry to [EXECUTION-LOG.md](EXECUTION-LOG.md). The Notion Build Brief (`f106a46762d14d7eb5f039dc7cf25f1a`) is the ultimate source of truth; this repo mirrors it.
 
 ---
 
@@ -58,6 +58,9 @@ src/
   dedup.ts            # ported §7 engine (see below) — 1:1, tested
   sheets.ts           # googleapis read/append/merge
   types.ts            # Item, StagingRow, etc.
+  calcom/             # cal.com booking webhook → #vsw-future-planning notification (2026-07-27,
+                      # see Execution Log same date). Plain HTTP endpoint (server.ts), separate from
+                      # the Bolt Socket Mode connection — no sheet writes, no golden-rule overlap.
 ```
 
 ---
