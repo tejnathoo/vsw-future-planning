@@ -1,0 +1,1249 @@
+<title>Week Plan — Hour by Hour</title>
+<style>
+/* @font-face:neue-montreal */
+
+  .plan {
+    --paper: #FBFBFC;
+    --panel: #FFFFFF;
+    --sunk: #F4F5F7;
+    --ink: #17191F;
+    --muted: #666C7A;
+    --faint: #9AA0AD;
+    --rule: #E7E9ED;
+    --rule-strong: #D6D9DF;
+    --accent: #2F55D4;
+    --accent-ink: #1E3FAE;
+    --accent-tint: #EEF2FE;
+    --ship: #1B7F5A;
+    --ship-tint: #E8F5EF;
+
+    font-family: "Neue Montreal", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    line-height: 1.5;
+    min-height: 100%;
+  }
+  @media (prefers-color-scheme: dark) {
+    .plan {
+      --paper: #0F1013; --panel: #16181D; --sunk: #1B1E24; --ink: #ECEDF0; --muted: #9BA1AE;
+      --faint: #6B7280; --rule: #24272E; --rule-strong: #333741;
+      --accent: #7C97FF; --accent-ink: #A9BCFF; --accent-tint: #191E2C;
+      --ship: #5FCB9C; --ship-tint: #12241D;
+    }
+  }
+  :root[data-theme="dark"] .plan {
+    --paper: #0F1013; --panel: #16181D; --sunk: #1B1E24; --ink: #ECEDF0; --muted: #9BA1AE;
+    --faint: #6B7280; --rule: #24272E; --rule-strong: #333741;
+    --accent: #7C97FF; --accent-ink: #A9BCFF; --accent-tint: #191E2C;
+    --ship: #5FCB9C; --ship-tint: #12241D;
+  }
+  :root[data-theme="light"] .plan {
+    --paper: #FBFBFC; --panel: #FFFFFF; --sunk: #F4F5F7; --ink: #17191F; --muted: #666C7A;
+    --faint: #9AA0AD; --rule: #E7E9ED; --rule-strong: #D6D9DF;
+    --accent: #2F55D4; --accent-ink: #1E3FAE; --accent-tint: #EEF2FE;
+    --ship: #1B7F5A; --ship-tint: #E8F5EF;
+  }
+
+  .plan * { box-sizing: border-box; }
+  .plan .wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: clamp(28px, 5vw, 60px) clamp(20px, 4vw, 44px) 68px;
+  }
+
+  /* ---- header ---- */
+  .plan .eyebrow {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--accent-ink); margin: 0 0 16px;
+  }
+  .plan h1 {
+    font-size: clamp(28px, 4.4vw, 40px); font-weight: 700;
+    letter-spacing: -0.022em; line-height: 1.08; text-wrap: balance; margin: 0 0 14px;
+  }
+  .plan .meta {
+    font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums;
+    padding-bottom: 18px; border-bottom: 1px solid var(--rule-strong); margin: 0;
+  }
+
+  /* ---- the one goal ---- */
+  .plan .wig {
+    margin-top: 26px; border: 1px solid var(--rule-strong); border-radius: 12px;
+    background: var(--panel); overflow: hidden;
+  }
+  .plan .wig-main { padding: 20px 22px 18px; border-left: 3px solid var(--accent); }
+  .plan .wig-label {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--faint); margin: 0 0 10px;
+  }
+  .plan .wig-goal {
+    font-size: clamp(17px, 2.1vw, 20px); font-weight: 500; letter-spacing: -0.014em;
+    line-height: 1.32; margin: 0; max-width: 46ch; text-wrap: balance;
+  }
+  .plan .wig-goal .n { color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+  .plan .wig-stretch {
+    padding: 12px 22px; background: var(--sunk); border-top: 1px solid var(--rule);
+    font-size: 12.5px; color: var(--muted);
+  }
+  .plan .wig-stretch b { color: var(--ink); font-weight: 500; }
+  .plan .wig-not {
+    padding: 12px 22px; border-top: 1px solid var(--rule);
+    font-size: 12.5px; color: var(--muted);
+  }
+  .plan .wig-not b { color: var(--ink); font-weight: 500; }
+
+  /* ---- scoreboard ---- */
+  .plan .score {
+    margin-top: 14px; border: 1px solid var(--rule-strong);
+    border-radius: 12px; overflow: hidden; background: var(--panel);
+  }
+  .plan .score-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding: 13px 18px 11px; border-bottom: 1px solid var(--rule);
+  }
+  .plan .score-head .t {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--faint); margin: 0;
+  }
+  .plan .score-head .s { font-size: 11.5px; color: var(--faint); }
+  .plan .score-scroll { overflow-x: auto; }
+  .plan table.tiers {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+    font-variant-numeric: tabular-nums; min-width: 460px;
+  }
+  .plan table.tiers th, .plan table.tiers td {
+    text-align: right; padding: 9px 14px; border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  .plan table.tiers th:first-child, .plan table.tiers td:first-child {
+    text-align: left; font-weight: 500;
+  }
+  .plan table.tiers thead th {
+    font-size: 10.5px; font-weight: 500; letter-spacing: 0.07em;
+    text-transform: uppercase; color: var(--faint); border-bottom: 1px solid var(--rule-strong);
+  }
+  .plan table.tiers tbody tr:last-child td { border-bottom: none; }
+  .plan table.tiers td.goal-col { color: var(--accent-ink); font-weight: 500; }
+  .plan table.tiers tr.is-wig td { background: var(--accent-tint); }
+  .plan table.tiers tr.is-wig td:first-child { color: var(--accent-ink); font-weight: 500; }
+  .plan .gap { color: var(--muted); }
+
+  /* ---- hours ---- */
+  .plan .hours-grid {
+    margin-top: 14px;
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 1px; background: var(--rule);
+    border: 1px solid var(--rule-strong); border-radius: 12px; overflow: hidden;
+  }
+  @media (max-width: 620px) { .plan .hours-grid { grid-template-columns: repeat(3, 1fr); } }
+  .plan .hg-cell { background: var(--panel); padding: 14px 12px 12px; text-align: center; }
+  .plan .hg-day { font-size: 12px; font-weight: 500; color: var(--ink); margin: 0 0 2px; }
+  .plan .hg-window {
+    font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; margin: 0 0 6px;
+  }
+  .plan .hg-hrs {
+    font-size: 18px; font-weight: 700; color: var(--accent-ink);
+    font-variant-numeric: tabular-nums; letter-spacing: -0.02em; margin: 0;
+  }
+  .plan .hg-hrs small { font-size: 11px; font-weight: 500; }
+  .plan .hg-note { font-size: 10px; color: var(--faint); margin: 4px 0 0; line-height: 1.3; }
+  .plan .hg-total {
+    grid-column: 1 / -1; background: var(--accent-tint); padding: 9px 16px;
+    display: flex; align-items: baseline; justify-content: space-between;
+    font-variant-numeric: tabular-nums;
+  }
+  .plan .hg-total .lab {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.04em;
+    text-transform: uppercase; color: var(--accent-ink);
+  }
+  .plan .hg-total .val { font-size: 14px; font-weight: 700; color: var(--accent-ink); }
+
+  /* ---- standing triggers ---- */
+  .plan .standing {
+    margin-top: 14px; border: 1px solid var(--rule-strong);
+    border-radius: 12px; background: var(--panel); padding: 18px 20px;
+  }
+  .plan .standing .label {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--faint); margin: 0 0 4px;
+  }
+  .plan .standing .sub { font-size: 12px; color: var(--faint); margin: 0 0 14px; }
+  .plan .trig-list { display: grid; gap: 10px; }
+  .plan .trig {
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px;
+    padding-left: 13px; border-left: 2px solid var(--rule-strong);
+  }
+  .plan .trig .when {
+    font-size: 12.5px; font-weight: 500; color: var(--accent-ink);
+  }
+  .plan .trig .then { font-size: 12.5px; color: var(--muted); }
+
+  /* ---- system band ---- */
+  .plan .sys {
+    margin-top: 14px; border: 1px solid var(--rule-strong);
+    border-radius: 12px; background: var(--panel); padding: 18px 20px;
+  }
+  .plan .sys .label {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--faint); margin: 0 0 14px;
+  }
+  .plan .sys-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 680px) { .plan .sys-grid { grid-template-columns: repeat(3, 1fr); gap: 26px; } }
+  .plan .sys-item { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+  .plan .sys-item b { color: var(--ink); font-weight: 500; display: block; margin-bottom: 3px; }
+
+  /* ---- tabs ---- */
+  .plan .tabs {
+    display: flex; gap: 2px; margin-top: 40px;
+    border-bottom: 1px solid var(--rule-strong); overflow-x: auto;
+  }
+  .plan .tab {
+    appearance: none; background: none; border: none; cursor: pointer;
+    font-family: inherit; font-size: 14px; font-weight: 500; color: var(--muted);
+    padding: 12px 16px 14px; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; white-space: nowrap; letter-spacing: -0.005em;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .plan .tab .dt { font-weight: 400; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .plan .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+  .plan .tab:hover { color: var(--ink); }
+  .plan .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .plan .tab .today {
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent-ink); background: var(--accent-tint); padding: 2px 6px; border-radius: 4px;
+  }
+
+  /* ---- day panel ---- */
+  .plan .day { padding-top: 32px; }
+  .plan .day[hidden] { display: none; }
+  .plan .day-goal {
+    font-size: clamp(19px, 2.4vw, 23px); font-weight: 500; letter-spacing: -0.015em;
+    line-height: 1.28; text-wrap: balance; margin: 0 0 6px; max-width: 42ch;
+  }
+  .plan .day-cap {
+    font-size: 12.5px; color: var(--muted); margin: 0 0 26px;
+    font-variant-numeric: tabular-nums;
+  }
+  .plan .day-cap b { color: var(--accent-ink); font-weight: 500; }
+
+  /* ---- macro blocks ---- */
+  .plan .blocks { display: grid; gap: 12px; }
+  .plan .block {
+    border: 1px solid var(--rule-strong); border-radius: 12px;
+    background: var(--panel); overflow: hidden;
+  }
+  .plan .block-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+    padding: 13px 18px; border-bottom: 1px solid var(--rule);
+    border-left: 3px solid var(--rule-strong);
+  }
+  .plan .block.is-production .block-head { border-left-color: var(--accent); background: var(--accent-tint); }
+  .plan .block.is-reactive .block-head { border-left-color: var(--rule-strong); background: var(--sunk); }
+  .plan .block.is-admin .block-head { border-left-color: var(--faint); background: var(--sunk); }
+  .plan .block.is-done .block-head { border-left-color: var(--ship); background: var(--ship-tint); }
+
+  .plan .block-name {
+    font-size: 13.5px; font-weight: 500; color: var(--ink); letter-spacing: -0.005em;
+  }
+  .plan .block.is-production .block-name { color: var(--accent-ink); }
+  .plan .block.is-done .block-name { color: var(--ship); }
+  .plan .block-kind {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--faint); margin-right: 8px;
+  }
+  .plan .block.is-production .block-kind { color: var(--accent); }
+  .plan .block.is-done .block-kind { color: var(--ship); }
+  .plan .block-right {
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .plan .block-dur { font-size: 12px; color: var(--muted); }
+  .plan .target {
+    font-size: 11.5px; font-weight: 500; color: var(--accent-ink);
+    background: var(--panel); border: 1px solid var(--accent);
+    border-radius: 20px; padding: 2px 10px; white-space: nowrap;
+  }
+  .plan .block.is-done .target {
+    color: var(--ship); border-color: var(--ship); background: var(--panel);
+  }
+
+  /* micro ladder */
+  .plan .micro { display: grid; }
+  .plan .micro-row {
+    display: grid; grid-template-columns: 108px minmax(0, 1fr); gap: 14px;
+    padding: 11px 18px; border-bottom: 1px solid var(--rule);
+  }
+  .plan .micro-row:last-child { border-bottom: none; }
+  .plan .micro-time {
+    font-size: 12px; font-weight: 500; color: var(--muted);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .plan .micro-body strong {
+    display: block; font-size: 13px; font-weight: 500; color: var(--ink);
+    letter-spacing: -0.005em; margin-bottom: 2px;
+  }
+  .plan .micro-body span { font-size: 12.5px; color: var(--muted); }
+  .plan .bg {
+    display: inline-block; font-size: 10.5px; font-weight: 500; color: var(--muted);
+    border: 1px solid var(--rule-strong); border-radius: 20px;
+    padding: 1px 8px; margin-left: 6px; white-space: nowrap;
+  }
+
+  /* carry note */
+  .plan .carry {
+    margin-top: 14px; font-size: 12px; color: var(--faint);
+    padding-left: 13px; border-left: 2px solid var(--rule-strong);
+  }
+  .plan .carry b { color: var(--muted); font-weight: 500; }
+
+  /* ---- week switcher ---- */
+  .plan .topbar {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .plan .topbar .eyebrow { margin-bottom: 0; }
+  .plan .wk-switch { display: flex; align-items: center; gap: 8px; }
+  .plan .wk-switch label {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--faint);
+  }
+  .plan .wk-switch select {
+    appearance: none; -webkit-appearance: none;
+    font-family: inherit; font-size: 12.5px; font-weight: 500; color: var(--ink);
+    background-color: var(--panel); border: 1px solid var(--rule-strong);
+    border-radius: 8px; padding: 6px 30px 6px 11px; cursor: pointer;
+    font-variant-numeric: tabular-nums; line-height: 1.3;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23666C7A' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 11px center;
+  }
+  .plan .wk-switch select:hover { border-color: var(--accent); }
+  .plan .wk-switch select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .plan .week[hidden] { display: none; }
+
+  .plan .archived {
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+    margin: 0 0 20px; padding: 11px 16px;
+    background: var(--sunk); border: 1px solid var(--rule-strong); border-radius: 10px;
+  }
+  .plan .archived .tag {
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); background: var(--panel);
+    border: 1px solid var(--rule-strong); border-radius: 4px; padding: 2px 7px;
+  }
+  .plan .archived .txt { font-size: 12px; color: var(--muted); }
+
+  /* ---- risk callout ---- */
+  .plan .risk {
+    margin-top: 14px; border: 1px solid var(--rule-strong); border-left: 3px solid var(--accent);
+    border-radius: 12px; background: var(--panel); padding: 16px 20px;
+  }
+  .plan .risk .label {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--faint); margin: 0 0 8px;
+  }
+  .plan .risk p { font-size: 12.5px; color: var(--muted); margin: 0 0 8px; line-height: 1.5; }
+  .plan .risk p:last-child { margin-bottom: 0; }
+  .plan .risk b { color: var(--ink); font-weight: 500; }
+
+  /* ---- lead measures ---- */
+  .plan .lead {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 1px; background: var(--rule); border-top: 1px solid var(--rule-strong);
+  }
+  @media (max-width: 620px) { .plan .lead { grid-template-columns: repeat(3, 1fr); } }
+  .plan .lead-cell { background: var(--panel); padding: 11px 10px 10px; text-align: center; }
+  .plan .lead-lab {
+    font-size: 10px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--faint); margin: 0 0 3px;
+  }
+  .plan .lead-val {
+    font-size: 15px; font-weight: 700; color: var(--accent-ink);
+    font-variant-numeric: tabular-nums; letter-spacing: -0.02em; margin: 0;
+  }
+  .plan .lead-val small { font-size: 11px; font-weight: 500; color: var(--muted); }
+
+  /* ---- footer ---- */
+  .plan .signoff {
+    margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--rule);
+    font-size: 12px; color: var(--faint); display: flex; flex-wrap: wrap;
+    gap: 6px 12px; font-variant-numeric: tabular-nums;
+  }
+  .plan .signoff .sep { opacity: 0.6; }
+</style>
+
+<div class="plan">
+  <div class="wrap">
+
+    <div class="topbar">
+      <p class="eyebrow">VSW Future Planning &middot; Sponsor Outreach</p>
+      <div class="wk-switch">
+        <label for="wk-select">Week</label>
+        <select id="wk-select">
+          <option value="2026-08-03" selected>Aug 3 &ndash; 6 &middot; This week</option>
+          <option value="2026-07-27">Jul 27 &ndash; 31 &middot; Archived</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ============================ WEEK OF AUG 3 ============================ -->
+    <section class="week" data-week="2026-08-03" data-start="2026-08-03" data-end="2026-08-06">
+
+    <h1>Week Plan</h1>
+    <p class="meta">Mon Aug 3 &ndash; Thu Aug 6, 2026</p>
+
+    <div class="wig">
+      <div class="wig-main">
+        <p class="wig-label">The one goal this week</p>
+        <p class="wig-goal">Take Tier 4 from <span class="n">0</span> to <span class="n">100</span> organizations &mdash; identified, routed, enriched, drafted and sent &mdash; by Thursday August 6.</p>
+      </div>
+      <p class="wig-stretch"><b>Also committed, separate from the goal:</b> <b>Last Touch Date</b> gets backfilled on all 70 sent rows. It is blank on every one, so no follow-up can come due for anybody and the day each message went out cannot be reconstructed. Andrew asked on Friday for follow-ups to go out, and this is what has to exist first. <b>The cold email side of Tier 1 to Tier 3 is already sent</b>, so there is no send backlog on this side; the 45 outstanding LinkedIn invitations are Vivian's queue.</p>
+      <p class="wig-not"><b>Monday is BC Day, and Andrew already treated it as a holiday</b> in his Friday note (&ldquo;continue next week, minding that Monday is a holiday&rdquo;). It is still written as a working day here pending a direct answer from him. If Monday goes, the week loses 7.5 hrs and the goal drops to routing and drafting 100, with sends moving to the following Monday.</p>
+      <p class="wig-not"><b>Andrew has now twice ranked finding contacts below sending.</b> On Jul 22: if there is spare time after sending, follow-ups and arranging meetings, then spend it finding emails for the rest of the list. On Jul 31: focus specifically on getting emails and follow-ups sent and meetings arranged. Route identification for 100 organisations is that spare-time activity, and it takes the first two days here. The week still ends at 100 sent, so the destination matches what he asked for. The shape of Monday and Tuesday is the part worth putting to him.</p>
+    </div>
+
+    <div class="risk">
+      <p class="label">No approval gate. Draft it, send it.</p>
+      <p><b>Andrew closed this on Friday.</b> His words: the drafted messages are approved, including the follow-up copy, and when he supplies specific content it goes out as drafted unless there is an actual error or he asks for input. He named the failure directly, that the drafting was revised and then the sends were held waiting on approval for the revision.</p>
+      <p><b>The gate was always on the template, never on each organisation.</b> On Jul 22 he asked for the outreach scripts to confirm they were clear for launch, then said to send Tier 1 and Tier 2 the same day. He also said plainly that his time is not his own and he cannot respond quickly, which is the whole reason nothing should wait on him.</p>
+      <p><b>So drafting and sending are one activity this week, not two stages with a hand-off between them.</b> An organisation gets drafted and sent in the same pass. The only thing still worth flagging to him is copy that departs from his template, and flagging it does not mean holding it.</p>
+    </div>
+
+    <div class="score">
+      <div class="score-head">
+        <p class="t">Scoreboard</p>
+        <span class="s">Live counts read directly from the sheet, Fri Jul 31 &middot; 413 org rows</span>
+      </div>
+      <div class="score-scroll">
+        <table class="tiers">
+          <thead>
+            <tr>
+              <th scope="col">Tier</th>
+              <th scope="col">Now</th>
+              <th scope="col">Target</th>
+              <th scope="col">Gap</th>
+              <th scope="col">Where they sit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Tier 1</td><td>23</td><td class="goal-col">23</td><td class="gap">0</td>
+              <td>8 sent, 10 approved waiting to send, 3 enriched, 1 replied, 1 bounced</td>
+            </tr>
+            <tr>
+              <td>Tier 2</td><td>50</td><td class="goal-col">50</td><td class="gap">0</td>
+              <td>31 sent, 18 approved waiting to send, 1 enriched</td>
+            </tr>
+            <tr>
+              <td>Tier 3</td><td>53</td><td class="goal-col">50</td><td class="gap">&mdash;</td>
+              <td>31 sent, 19 approved waiting to send, 1 routed, 1 enriched, 1 archived</td>
+            </tr>
+            <tr class="is-wig">
+              <td>Tier 4</td><td>0</td><td class="goal-col">100</td><td class="gap">100</td>
+              <td>This week. Carved from the 236 eligible &mdash; gate locked Jul 31</td>
+            </tr>
+            <tr>
+              <td>Tier 5</td><td>2</td><td class="goal-col">&mdash;</td><td class="gap">&mdash;</td>
+              <td>Untiered first and re-competing for a Tier 4 slot</td>
+            </tr>
+            <tr>
+              <td>Eligible pool</td><td>236</td><td class="goal-col">&mdash;</td><td class="gap">&mdash;</td>
+              <td>Cold, unarchived, no warm signal. 206 of them (87%) have no route and no contact at all</td>
+            </tr>
+            <tr>
+              <td>Warm &mdash; handed off</td><td>50</td><td class="goal-col">&mdash;</td><td class="gap">&mdash;</td>
+              <td>Out of the cold pipeline entirely, not counted against any tier</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="lead">
+        <div class="lead-cell"><p class="lead-lab">Identified</p><p class="lead-val">0<small>/100</small></p></div>
+        <div class="lead-cell"><p class="lead-lab">Routed</p><p class="lead-val">0<small>/100</small></p></div>
+        <div class="lead-cell"><p class="lead-lab">Enriched</p><p class="lead-val">0<small>/100</small></p></div>
+        <div class="lead-cell"><p class="lead-lab">Drafted</p><p class="lead-val">0<small>/100</small></p></div>
+        <div class="lead-cell"><p class="lead-lab">Sent</p><p class="lead-val">0<small>/100</small></p></div>
+      </div>
+    </div>
+
+    <div class="hours-grid">
+      <div class="hg-cell"><p class="hg-day">Mon 3</p><p class="hg-window">8:00a &ndash; 3:30p</p><p class="hg-hrs">7.5 <small>hrs</small></p><p class="hg-note">BC Day &mdash; pending Andrew</p></div>
+      <div class="hg-cell"><p class="hg-day">Tue 4</p><p class="hg-window">8:00a &ndash; 3:30p</p><p class="hg-hrs">7.5 <small>hrs</small></p></div>
+      <div class="hg-cell"><p class="hg-day">Wed 5</p><p class="hg-window">8:00a &ndash; 3:30p</p><p class="hg-hrs">7.5 <small>hrs</small></p></div>
+      <div class="hg-cell"><p class="hg-day">Thu 6</p><p class="hg-window">8:00a &ndash; 3:30p</p><p class="hg-hrs">7.5 <small>hrs</small></p><p class="hg-note">Event 5:30p</p></div>
+      <div class="hg-cell"><p class="hg-day">Fri 7</p><p class="hg-window">&mdash;</p><p class="hg-hrs">0 <small>hrs</small></p><p class="hg-note">Not worked</p></div>
+      <div class="hg-total"><span class="lab">Total week</span><span class="val">30 hrs</span></div>
+    </div>
+
+    <div class="standing">
+      <p class="label">Standing triggers</p>
+      <p class="sub">Not tasks on a list. Each one fires off a cue, so nothing depends on remembering it.</p>
+      <div class="trig-list">
+        <div class="trig">
+          <span class="when">When I finish a route-identification batch</span>
+          <span class="then">I log the minutes and the org count before starting the next one. The 5 min/org estimate is the whole week's load-bearing assumption and it has never been measured.</span>
+        </div>
+        <div class="trig">
+          <span class="when">When Status flips to Sent, or a follow-up actually goes out</span>
+          <span class="then">I update Last Touch Date on that row &mdash; and tick Follow-up Sent? if it's a follow-up. Nothing else populates either field.</span>
+        </div>
+        <div class="trig">
+          <span class="when">When Vivian sends an update</span>
+          <span class="then">I update the sheet before I reply to her.</span>
+        </div>
+        <div class="trig">
+          <span class="when">When I sit down at the start of a block</span>
+          <span class="then">I open overview-stats first and read today's number.</span>
+        </div>
+        <div class="trig">
+          <span class="when">When the follow-up-due view has rows in it</span>
+          <span class="then">I send those follow-ups before starting the next draft batch.</span>
+        </div>
+        <div class="trig">
+          <span class="when">When I finish a block</span>
+          <span class="then">I log the actual time against the estimate before standing up.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sys">
+      <p class="label">How this plan stays accurate</p>
+      <div class="sys-grid">
+        <div class="sys-item"><b>Blocks are sized by output</b>Each block carries a deliverable and a number. The clock rows inside are a guide, not a rule. A block ends when the number is hit.</div>
+        <div class="sys-item"><b>Estimates get corrected daily</b>Actual time is logged against every estimate. Later days get re-timed the evening before, using the week's real numbers.</div>
+        <div class="sys-item"><b>One scoreboard, not a report</b>overview-stats is live against the sheet. Progress is whatever it says, which means it cannot drift from what I claim.</div>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Days of the week">
+      <button class="tab" role="tab" id="tab-a-mon" aria-controls="panel-a-mon" aria-selected="false" data-day="mon" data-date="2026-08-03">Monday <span class="dt">3</span></button>
+      <button class="tab" role="tab" id="tab-a-tue" aria-controls="panel-a-tue" aria-selected="false" data-day="tue" data-date="2026-08-04">Tuesday <span class="dt">4</span></button>
+      <button class="tab" role="tab" id="tab-a-wed" aria-controls="panel-a-wed" aria-selected="false" data-day="wed" data-date="2026-08-05">Wednesday <span class="dt">5</span></button>
+      <button class="tab" role="tab" id="tab-a-thu" aria-controls="panel-a-thu" aria-selected="false" data-day="thu" data-date="2026-08-06">Thursday <span class="dt">6</span></button>
+    </div>
+
+    <!-- MONDAY AUG 3 -->
+    <section class="day" role="tabpanel" id="panel-a-mon" aria-labelledby="tab-a-mon" data-day="mon">
+      <h2 class="day-goal">Tier 4 is a real list of 100, and the route rate is a measured number instead of a guess.</h2>
+      <p class="day-cap">7.5 hrs &middot; 8:00a to 3:30p &middot; <b>the first 10 routes get timed to the minute</b> &mdash; the rest of the week is re-planned off that number</p>
+
+      <div class="blocks">
+
+        <div class="block is-admin">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Admin</span>Start-up &amp; check-in</span>
+            <span class="block-right"><span class="block-dur">0:15</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">8:00&ndash;8:15</span><span class="micro-body"><strong>Start-up &amp; check-in</strong><span>Read the scoreboard, set today's number, check-in to Andrew. Ask him directly whether BC Day should be worked, since it decides whether the week has 30 hrs or 22.5.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-production">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Production</span>Tier 4 selected and written</span>
+            <span class="block-right"><span class="block-dur">1:15</span><span class="target">100 tagged Tier 4</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">8:15&ndash;8:45</span><span class="micro-body"><strong>Run the scoring pass on the live 236</strong><span>The gate is already locked: Tier blank or Tier 5, Status not Archived, no Warm Lead Person, Warm Lead? not TRUE, Workstream Cold. Ranking is the stripped 2026-07-17 formula &mdash; sponsorship evidence 46, Why Them specificity 30, budget and decision-maker fit 24, contactability 28.<span class="bg">Claude</span></span></span></div>
+            <div class="micro-row"><span class="micro-time">8:45&ndash;9:15</span><span class="micro-body"><strong>Review the ranked 100</strong><span>87% of the pool has no contact data, so contactability barely discriminates and the ranking is effectively decided by sponsorship evidence and Why Them quality. Eyes on the cut line, not the whole list.</span></span></div>
+            <div class="micro-row"><span class="micro-time">9:15&ndash;9:30</span><span class="micro-body"><strong>Write Tier and Status, verify by exact cell</strong><span>Read back every write by exact cell address, never a row range. Flag any VSW = TRUE row that lands in the 100 &mdash; Techstars is a 2023 sponsor, and its draft has to open from the prior sponsorship rather than introduce VSW cold.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-production">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Production</span>Route identification &mdash; batch 1</span>
+            <span class="block-right"><span class="block-dur">5:30</span><span class="target">50 at Route identified</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">9:30&ndash;10:15</span><span class="micro-body"><strong>The first 10, timed</strong><span>Individual Google searches, one org at a time, named contact and route recorded per row. Stopwatch on. This is the measurement, not just the first ten rows of work.</span></span></div>
+            <div class="micro-row"><span class="micro-time">10:15&ndash;10:30</span><span class="micro-body"><strong>Re-time Tuesday to Thursday off the real rate</strong><span>At 5 min/org the week has 4:45 of slack. At 7 min the slack is gone. At 10 min the week is over budget by 3 hrs and something has to be cut &mdash; better to know that on Monday morning than Wednesday night.</span></span></div>
+            <div class="micro-row"><span class="micro-time">10:30&ndash;12:00</span><span class="micro-body"><strong>Route to 25</strong><span>Straight through. Log the batch time at the end.</span></span></div>
+            <div class="micro-row"><span class="micro-time">12:00&ndash;12:30</span><span class="micro-body"><strong>Break &amp; checkpoint</strong><span>Midday status to Andrew &mdash; the measured route rate and what it means for the week.</span></span></div>
+            <div class="micro-row"><span class="micro-time">12:30&ndash;3:00</span><span class="micro-body"><strong>Route to 50</strong><span>Second half of the batch. Half the routing done by end of day.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-admin">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Admin</span>Wrap-up &amp; check-out</span>
+            <span class="block-right"><span class="block-dur">0:30</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">3:00&ndash;3:30</span><span class="micro-body"><strong>Wrap-up &amp; check-out</strong><span>Log actuals against every estimate, rewrite Tuesday to Thursday using the real route rate, EOD status to Andrew, tomorrow's first task set.</span></span></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TUESDAY AUG 4 -->
+    <section class="day" role="tabpanel" id="panel-a-tue" aria-labelledby="tab-a-tue" data-day="tue" hidden>
+      <h2 class="day-goal">All 100 routed, the 47-draft backlog out the door, and enrichment running on the full set.</h2>
+      <p class="day-cap">7.5 hrs &middot; 8:00a to 3:30p &middot; <b>timings below are provisional</b> &mdash; they get rewritten Monday evening from Monday's measured rate</p>
+
+      <div class="blocks">
+
+        <div class="block is-admin">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Admin</span>Start-up &amp; check-in</span>
+            <span class="block-right"><span class="block-dur">0:15</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">8:00&ndash;8:15</span><span class="micro-body"><strong>Start-up &amp; check-in</strong><span>Read the scoreboard, set today's number, check-in to Andrew.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-production">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Production</span>Route identification &mdash; batch 2</span>
+            <span class="block-right"><span class="block-dur">4:10</span><span class="target">100 of 100 at Route identified</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">8:15&ndash;10:30</span><span class="micro-body"><strong>Route to 75</strong><span>Same manual pass. Log the batch time.</span></span></div>
+            <div class="micro-row"><span class="micro-time">10:30&ndash;12:25</span><span class="micro-body"><strong>Route to 100</strong><span>Routing finished. Every Tier 4 org now has a named contact or a generic-inbox fallback, and Outreach Route is populated using canonical dropdown values only &mdash; no new variants.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-production">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Production</span>Enrichment launched across all 100</span>
+            <span class="block-right"><span class="block-dur">1:00</span><span class="target">5 verified clean by hand</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">12:25&ndash;12:40</span><span class="micro-body"><strong>Checkpoint</strong><span>Midday status to Andrew: routing complete, enrichment starting.</span></span></div>
+            <div class="micro-row"><span class="micro-time">12:40&ndash;1:10</span><span class="micro-body"><strong>Test on 5, review by hand</strong><span>Same gate as Tier 3 &mdash; namesake traps, thin initiatives, deep-scrape of the org's own site rather than open-web search. Five have to hold clean before it runs on the rest.</span></span></div>
+            <div class="micro-row"><span class="micro-time">1:10&ndash;1:25</span><span class="micro-body"><strong>Launch across all 100</strong><span>Runs unattended into the evening so Wednesday morning starts with output to review, not a job to start.<span class="bg">Claude &middot; background</span></span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-production">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Production</span>Make the follow-up system able to fire</span>
+            <span class="block-right"><span class="block-dur">1:35</span><span class="target">Last Touch Date on all 70</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">1:25&ndash;1:55</span><span class="micro-body"><strong>Backfill Last Touch Date on the 70 sent rows</strong><span>Blank on every one, so the follow-up view returns nothing and the notification fires for nobody. Where a real send date is not recoverable, leave it blank rather than inventing one. Pulled forward from Thursday because Andrew asked on Friday for follow-ups to go out, and nothing can come due until this exists.</span></span></div>
+            <div class="micro-row"><span class="micro-time">1:55&ndash;3:00</span><span class="micro-body"><strong>Follow-up sweep</strong><span>Work whatever the view surfaces once the dates are in. The follow-up copy is already approved, so these can go out the same day. First time the view will have had rows in it.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-admin">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Admin</span>Wrap-up &amp; check-out</span>
+            <span class="block-right"><span class="block-dur">0:30</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">3:00&ndash;3:30</span><span class="micro-body"><strong>Wrap-up &amp; check-out</strong><span>Log actuals, EOD status to Andrew, warn him that 100 drafts land with him tomorrow evening and that Thursday's sends depend on his turnaround.</span></span></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- WEDNESDAY AUG 5 -->
+    <section class="day" role="tabpanel" id="panel-a-wed" aria-labelledby="tab-a-wed" data-day="wed" hidden>
+      <h2 class="day-goal">All 100 enriched, and the first 50 drafted and out the door in the same pass.</h2>
+      <p class="day-cap">7.5 hrs &middot; 8:00a to 3:30p &middot; <b>no submission step</b> &mdash; an organisation gets drafted and sent before moving to the next</p>
+
+      <div class="blocks">
+
+        <div class="block is-admin">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Admin</span>Start-up &amp; check-in</span>
+            <span class="block-right"><span class="block-dur">0:15</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">8:00&ndash;8:15</span><span class="micro-body"><strong>Start-up &amp; check-in</strong><span>Read the scoreboard, check-in to Andrew, confirm he is expecting 100 drafts this evening.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-production">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Production</span>Enrichment reviewed across all 100</span>
+            <span class="block-right"><span class="block-dur">3:10</span><span class="target">100 through the enrichment gate</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">8:15&ndash;9:50</span><span class="micro-body"><strong>Review batch A &mdash; orgs 1 to 50</strong><span>Their Initiative, Their Goal, Personalization Source, VSW Alignment, Why Us. The write-time gate refuses the write rather than reporting a warning, so anything that fails here gets fixed here.</span></span></div>
+            <div class="micro-row"><span class="micro-time">9:50&ndash;11:25</span><span class="micro-body"><strong>Review batch B &mdash; orgs 51 to 100</strong><span>Same pass. Reference point: Tier 3 finished at 51 of 53 with a real initiative, and the 2 that never got one are still not draftable.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-production">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Production</span>Draft and send batch A</span>
+            <span class="block-right"><span class="block-dur">3:35</span><span class="target">50 drafted and sent</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">11:25&ndash;11:40</span><span class="micro-body"><strong>Checkpoint</strong><span>Midday status to Andrew: enrichment closed, drafting and sending starting together.</span></span></div>
+            <div class="micro-row"><span class="micro-time">11:40&ndash;1:10</span><span class="micro-body"><strong>Write batch A &mdash; orgs 1 to 50</strong><span>One tab per company, Draft Link written back to the sheet. Stop Slop tone pass, then read the doc back before calling it done. Any past VSW sponsor opens from the prior sponsorship rather than introducing VSW cold.<span class="bg">Claude &middot; background</span></span></span></div>
+            <div class="micro-row"><span class="micro-time">1:10&ndash;2:50</span><span class="micro-body"><strong>Send batch A</strong><span>Email or LinkedIn per the row's route. Status, Sent? and Last Touch Date updated as each one goes. Logged rate is roughly 2 min per send end to end.</span></span></div>
+            <div class="micro-row"><span class="micro-time">2:50&ndash;3:00</span><span class="micro-body"><strong>Flag anything that left the template</strong><span>Post the exceptions to Andrew rather than asking him for anything. Metro Vancouver is the pattern: say what departed and why, then keep going.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-admin">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Admin</span>Wrap-up &amp; check-out</span>
+            <span class="block-right"><span class="block-dur">0:30</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">3:00&ndash;3:30</span><span class="micro-body"><strong>Wrap-up &amp; check-out</strong><span>Log actuals, EOD status, set Thursday's first task. Thursday's shape is decided by whether approval lands, so both versions get written down tonight.</span></span></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- THURSDAY AUG 6 -->
+    <section class="day" role="tabpanel" id="panel-a-thu" aria-labelledby="tab-a-thu" data-day="thu" hidden>
+      <h2 class="day-goal">The second 50 drafted and sent, every reply worked into a meeting, and the week closed.</h2>
+      <p class="day-cap">7.5 hrs &middot; 8:00a to 3:30p &middot; <b>nothing here waits on anyone</b> &middot; event at 5:30p, so the day ends on time</p>
+
+      <div class="blocks">
+
+        <div class="block is-admin">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Admin</span>Start-up &amp; check-in</span>
+            <span class="block-right"><span class="block-dur">0:15</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">8:00&ndash;8:15</span><span class="micro-body"><strong>Start-up &amp; check-in</strong><span>Check whether the approval landed overnight. It decides the whole day, so it is the first thing read, before the scoreboard.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-production">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Production</span>Draft and send batch B</span>
+            <span class="block-right"><span class="block-dur">3:35</span><span class="target">50 drafted and sent, 100 total</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">8:15&ndash;9:45</span><span class="micro-body"><strong>Write batch B &mdash; orgs 51 to 100</strong><span>Same pass as Wednesday. Draft Link back to the sheet, tone pass, read the doc back.<span class="bg">Claude &middot; background</span></span></span></div>
+            <div class="micro-row"><span class="micro-time">9:45&ndash;11:25</span><span class="micro-body"><strong>Send batch B</strong><span>Status, Sent? and Last Touch Date updated as each one goes. This is the block that takes Tier 4 to 100 sent.</span></span></div>
+            <div class="micro-row"><span class="micro-time">11:25&ndash;11:50</span><span class="micro-body"><strong>Checkpoint</strong><span>Status to Andrew: Tier 4 complete, 100 out.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-production">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Production</span>Replies and meetings</span>
+            <span class="block-right"><span class="block-dur">1:00</span><span class="target">every reply has a next step</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">11:50&ndash;12:50</span><span class="micro-body"><strong>Work the replies into meetings</strong><span>Three organisations have replied so far, Fasken, RBCx and Zendesk Startups, and two already have meetings booked. Andrew asked for meetings arranged as an explicit priority and this plan had no time on it until now. Teams invites, per his Jul 22 instruction.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-reactive">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Buffer</span>Unallocated</span>
+            <span class="block-right"><span class="block-dur">0:45</span><span class="target">absorbs the send overrun</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">12:50&ndash;1:35</span><span class="micro-body"><strong>Deliberately empty</strong><span>The 2 min/send rate is measured, but 50 sends inside one block has not been done at that pace. This exists so a slow batch does not push the weekly review off the day. If it goes unused, start Tier 5 enrichment.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-admin">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Admin</span>Close the week</span>
+            <span class="block-right"><span class="block-dur">1:55</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">1:35&ndash;2:35</span><span class="micro-body"><strong>Weekly review</strong><span>Inboxes to zero, every tier confirmed to have a live next action, calendar checked both directions. The linchpin, not the optional bit.</span></span></div>
+            <div class="micro-row"><span class="micro-time">2:35&ndash;3:30</span><span class="micro-body"><strong>Hours, status and check-out</strong><span>Time sheet reconciled, end-of-week status to Andrew: what shipped against what was promised, what moved and why. Next week's first task written down. Real route and send rates recorded so next week is sized off evidence rather than this week's guesses.</span></span></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    </section>
+    <!-- ========================== WEEK OF JUL 27 (ARCHIVE) ========================== -->
+    <section class="week" data-week="2026-07-27" data-start="2026-07-27" data-end="2026-07-31" hidden>
+
+    <div class="archived">
+      <span class="tag">Archived</span>
+      <span class="txt">Week of Mon Jul 27 &ndash; Fri Jul 31, 2026. Kept as the record of what was planned and what shipped &mdash; counts below are as they stood that week, not current.</span>
+    </div>
+
+    <h1>Week Plan</h1>
+    <p class="meta">Mon Jul 27 &ndash; Fri Jul 31, 2026</p>
+
+    <div class="wig">
+      <div class="wig-main">
+        <p class="wig-label">The one goal this week</p>
+        <p class="wig-goal">Take Tier 3 from <span class="n">6</span> to <span class="n">50</span> organizations, fully drafted and awaiting approval, by Friday July 31.</p>
+      </div>
+      <p class="wig-stretch"><b>Stretch, not taken:</b> Tier 4 identification. 100 orgs tagged out of the untiered pool was never promised this week, and Friday is full of sends, so it moves to Monday rather than being half-done.</p>
+      <p class="wig-not"><b>Deliberately not promised:</b> sending. Tier 1 and Tier 2 approvals sit with Andrew and Vivian, so send volume is not mine to commit to.</p>
+    </div>
+
+    <div class="score">
+      <div class="score-head">
+        <p class="t">Scoreboard</p>
+        <span class="s">Live counts read directly from the sheet, Thu Jul 30</span>
+      </div>
+      <div class="score-scroll">
+        <table class="tiers">
+          <thead>
+            <tr>
+              <th scope="col">Tier</th>
+              <th scope="col">Now</th>
+              <th scope="col">Target</th>
+              <th scope="col">Gap</th>
+              <th scope="col">Where they sit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Tier 1</td><td>20</td><td class="goal-col">20</td><td class="gap">0</td>
+              <td>10 approved waiting to send, 8 sent, 1 replied, 1 bounced</td>
+            </tr>
+            <tr>
+              <td>Tier 2</td><td>49</td><td class="goal-col">50</td><td class="gap">1</td>
+              <td>48 drafted and approved, waiting to send. 1 route identified</td>
+            </tr>
+            <tr class="is-wig">
+              <td>Tier 3</td><td>50</td><td class="goal-col">50</td><td class="gap">0</td>
+              <td>All 50 fully drafted (Outreach Drafts #2 doc). Submitted to Andrew in Slack for approval Thursday</td>
+            </tr>
+            <tr>
+              <td>Tier 4</td><td>0</td><td class="goal-col">100</td><td class="gap">100</td>
+              <td>Not started &mdash; identification moved to Monday, Friday is full of sends</td>
+            </tr>
+            <tr>
+              <td>Untiered pool</td><td>369</td><td class="goal-col">&mdash;</td><td class="gap">&mdash;</td>
+              <td>308 in sourcing. Tier 4 is carved from here</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="hours-grid">
+      <div class="hg-cell"><p class="hg-day">Mon 27</p><p class="hg-window">8:00a &ndash; 12:00p</p><p class="hg-hrs">4 <small>hrs</small></p><p class="hg-note">Vancouver Tech Week</p></div>
+      <div class="hg-cell"><p class="hg-day">Tue 28</p><p class="hg-window">8:00a &ndash; 12:00p</p><p class="hg-hrs">4 <small>hrs</small></p><p class="hg-note">Vancouver Tech Week</p></div>
+      <div class="hg-cell"><p class="hg-day">Wed 29</p><p class="hg-window">8:00a &ndash; 3:30p</p><p class="hg-hrs">7.5 <small>hrs</small></p></div>
+      <div class="hg-cell"><p class="hg-day">Thu 30</p><p class="hg-window">9:30a &ndash; 7:00p</p><p class="hg-hrs">9.5 <small>hrs</small></p></div>
+      <div class="hg-cell"><p class="hg-day">Fri 31</p><p class="hg-window">8:00a &ndash; 1:00p</p><p class="hg-hrs">5 <small>hrs</small></p></div>
+      <div class="hg-total"><span class="lab">Total week</span><span class="val">30 hrs</span></div>
+    </div>
+
+    <div class="standing">
+      <p class="label">Standing triggers</p>
+      <p class="sub">Not tasks on a list. Each one fires off a cue, so nothing depends on remembering it.</p>
+      <div class="trig-list">
+        <div class="trig">
+          <span class="when">When Vivian sends an update</span>
+          <span class="then">I update the sheet before I reply to her.</span>
+        </div>
+        <div class="trig">
+          <span class="when">When I sit down at the start of a block</span>
+          <span class="then">I open overview-stats first and read today's number.</span>
+        </div>
+        <div class="trig">
+          <span class="when">When the follow-up-due view has rows in it</span>
+          <span class="then">I send those follow-ups before starting the next draft batch.</span>
+        </div>
+        <div class="trig">
+          <span class="when">When Status flips to Sent, or a follow-up actually goes out</span>
+          <span class="then">I update Last Touch Date on that row &mdash; and tick Follow-up Sent? if it's a follow-up. Nothing else populates either field.</span>
+        </div>
+        <div class="trig">
+          <span class="when">When I finish a block</span>
+          <span class="then">I log the actual time against the estimate before standing up.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sys">
+      <p class="label">How this plan stays accurate</p>
+      <div class="sys-grid">
+        <div class="sys-item"><b>Blocks are sized by output</b>Each block carries a deliverable and a number. The clock rows inside are a guide, not a rule. A block ends when the number is hit.</div>
+        <div class="sys-item"><b>Estimates get corrected daily</b>Actual time is logged against every estimate. Later days get re-timed the evening before, using the week's real numbers.</div>
+        <div class="sys-item"><b>One scoreboard, not a report</b>overview-stats is live against the sheet. Progress is whatever it says, which means it cannot drift from what I claim.</div>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Days of the week">
+      <button class="tab" role="tab" id="tab-mon" aria-controls="panel-mon" aria-selected="false" data-day="mon" data-date="2026-07-27">Monday <span class="dt">27</span></button>
+      <button class="tab" role="tab" id="tab-tue" aria-controls="panel-tue" aria-selected="false" data-day="tue" data-date="2026-07-28">Tuesday <span class="dt">28</span></button>
+      <button class="tab" role="tab" id="tab-wed" aria-controls="panel-wed" aria-selected="false" data-day="wed" data-date="2026-07-29">Wednesday <span class="dt">29</span></button>
+      <button class="tab" role="tab" id="tab-thu" aria-controls="panel-thu" aria-selected="false" data-day="thu" data-date="2026-07-30">Thursday <span class="dt">30</span></button>
+      <button class="tab" role="tab" id="tab-fri" aria-controls="panel-fri" aria-selected="false" data-day="fri" data-date="2026-07-31">Friday <span class="dt">31</span></button>
+    </div>
+
+    <!-- MONDAY -->
+    <section class="day" role="tabpanel" id="panel-mon" aria-labelledby="tab-mon" data-day="mon">
+      <h2 class="day-goal">Cal link live, follow-up copy written, and Tier 3's 44 selected.</h2>
+      <p class="day-cap">4 hrs &middot; 8:00a to 12:00p</p>
+
+      <div class="blocks">
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Week planned against live data</span>
+            <span class="block-right"><span class="block-dur">1:20</span><span class="target">shipped</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">8:00&ndash;8:15</span><span class="micro-body"><strong>Start-up &amp; check-in</strong><span>Slack check-in to Andrew, triage.</span></span></div>
+            <div class="micro-row"><span class="micro-time">8:15&ndash;9:20</span><span class="micro-body"><strong>Week planning</strong><span>Pipeline audited against the live sheet, capacity math done, the week's one goal set.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Cal link live</span>
+            <span class="block-right"><span class="block-dur">0:30</span><span class="target">shipped</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">9:30&ndash;10:00</span><span class="micro-body"><strong>Configured and test-booked</strong><span>Availability 10:00a to 4:00p Mon to Fri, minimum notice 3 business days, buffer set. Booked it once to confirm the notice rule holds, then sent the link to Andrew.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Tier 3 selected</span>
+            <span class="block-right"><span class="block-dur">1:15</span><span class="target">shipped</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">10:00&ndash;11:15</span><span class="micro-body"><strong>Scored the untiered pool and tagged the 44</strong><span>Ranked the 329 untiered by fit, took the top 44 cold leads, tagged them Tier 3. Rolling enrichment kicked off in the background so drafting doesn't starve later in the week.<span class="bg">Claude &middot; background</span></span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Follow-up copy and close out</span>
+            <span class="block-right"><span class="block-dur">0:45</span><span class="target">shipped</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">11:15&ndash;11:30</span><span class="micro-body"><strong>Checkpoint</strong><span>Midday status sent to Andrew.</span></span></div>
+            <div class="micro-row"><span class="micro-time">11:30&ndash;11:50</span><span class="micro-body"><strong>Follow-up copy</strong><span>One variant written, plus the interval rule for how many business days after send a follow-up is due. 8 emails were delivered with zero replies, so this was overdue.</span></span></div>
+            <div class="micro-row"><span class="micro-time">11:50&ndash;12:00</span><span class="micro-body"><strong>Wrap-up &amp; check-out</strong><span>Actuals logged, EOD status sent to Andrew, tomorrow's first task set.</span></span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <p class="carry"><b>Pushed to Tuesday:</b> the follow-up-due view in the sheet. It needs the interval rule to exist first, and there is not room for both today.</p>
+    </section>
+
+    <!-- TUESDAY -->
+    <section class="day" role="tabpanel" id="panel-tue" aria-labelledby="tab-tue" data-day="tue" hidden>
+      <h2 class="day-goal">Every Tier 3 org has a named contact and a route.</h2>
+      <p class="day-cap">4 hrs &middot; 8:00a to 12:00p</p>
+
+      <div class="blocks">
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Contact and route for Tier 3</span>
+            <span class="block-right"><span class="block-dur">~2:45</span><span class="target">50 at route identified</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">8:00&ndash;8:15</span><span class="micro-body"><strong>Start-up &amp; check-in</strong><span>Read the scoreboard, set today's number, check-in to Andrew.</span></span></div>
+            <div class="micro-row"><span class="micro-time">8:15&ndash;9:45</span><span class="micro-body"><strong>Contact sourcing batch</strong><span>Named primary contact per org. Review each as it lands rather than in one pile at the end.<span class="bg">Claude &middot; background</span></span></span></div>
+            <div class="micro-row"><span class="micro-time">9:45&ndash;10:00</span><span class="micro-body"><strong>Checkpoint</strong><span>Midday status to Andrew.</span></span></div>
+            <div class="micro-row"><span class="micro-time">10:00&ndash;11:00</span><span class="micro-body"><strong>Route assignment</strong><span>Email or LinkedIn per org, filled the gaps where no named contact surfaced with a generic-inbox route instead. Landed at 50 of 50 &mdash; beyond the 44 target, since the 6 pre-existing Tier 3 orgs got routed too.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Follow-up view and close out</span>
+            <span class="block-right"><span class="block-dur">~1:00</span><span class="target">view live in sheet</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">11:00&ndash;11:30</span><span class="micro-body"><strong>Build the follow-up-due view</strong><span>Carried from Monday. A filtered view that surfaces who is owed a follow-up, so the list generates itself instead of depending on memory.</span></span></div>
+            <div class="micro-row"><span class="micro-time">11:30&ndash;11:45</span><span class="micro-body"><strong>Enrichment spot-check</strong><span>Reviewed what the background enrichment run produced for Tier 3 &mdash; same gaps Tier 1 and Tier 2 enrichment had, not clean enough to draft from yet. Flagged for improving the process instead of pushing a spot-check pass.</span></span></div>
+            <div class="micro-row"><span class="micro-time">11:45&ndash;12:00</span><span class="micro-body"><strong>Wrap-up &amp; check-out</strong><span>Log actuals, EOD status, set tomorrow's first task.</span></span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <p class="carry"><b>Pushed to Wednesday:</b> the enrichment process needs improving based on what Tier 1 and Tier 2 showed. Tomorrow morning is iterating on it, testing on a small batch, then relaunching across all 50 before any more drafting resumes.</p>
+    </section>
+
+    <!-- WEDNESDAY -->
+    <section class="day" role="tabpanel" id="panel-wed" aria-labelledby="tab-wed" data-day="wed" hidden>
+      <h2 class="day-goal">Enrichment process improved and Tier 3 re-run clean. Andrew's edit applied and the approved backlog sent.</h2>
+      <p class="day-cap">7.5 hrs &middot; 8:00a to 3:30p &middot; <b>morning is enrichment, afternoon is sending</b> &mdash; no new drafting today</p>
+
+      <div class="blocks">
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Iterate and relaunch enrichment</span>
+            <span class="block-right"><span class="block-dur">~3:00</span><span class="target">all 50 confirmed clean</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">8:00&ndash;8:15</span><span class="micro-body"><strong>Start-up &amp; check-in</strong><span>Read the scoreboard. Tell Andrew directly that this morning is enrichment improvements and this afternoon is fixing edits plus sending the approved backlog &mdash; no new drafting today.</span></span></div>
+            <div class="micro-row"><span class="micro-time">8:15&ndash;10:30</span><span class="micro-body"><strong>Improve the process</strong><span>Review what Tier 1 and Tier 2 enrichment struggled with and refine the approach before running Tier 3 through it again.</span></span></div>
+            <div class="micro-row"><span class="micro-time">10:30&ndash;11:00</span><span class="micro-body"><strong>Test on 5, review by hand</strong><span>Same gate as always &mdash; namesake traps, thin initiatives. Five have to hold clean before it's trusted on the rest.</span></span></div>
+            <div class="micro-row"><span class="micro-time">11:00&ndash;11:15</span><span class="micro-body"><strong>Relaunch across all 50</strong><span>Background, same pattern as Monday, with the improvements folded in before it runs unattended.<span class="bg">Claude &middot; background</span></span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Fix edits, send approved work</span>
+            <span class="block-right"><span class="block-dur">~3:00</span><span class="target">11 Tier 1 sent</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">11:15&ndash;11:45</span><span class="micro-body"><strong>Apply Andrew's edit</strong><span>Replace all em dashes with colons across the approved Tier 1 and Tier 2 LinkedIn drafts, per this morning's note.</span></span></div>
+            <div class="micro-row"><span class="micro-time">11:45&ndash;12:00</span><span class="micro-body"><strong>Checkpoint</strong><span>Status to Andrew.</span></span></div>
+            <div class="micro-row"><span class="micro-time">12:00&ndash;2:15</span><span class="micro-body"><strong>Send the approved backlog</strong><span>The 11 Tier 1 messages sitting at Approved &mdash; waiting to send go out. Tracker updated as each one sends.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Close out</span>
+            <span class="block-right"><span class="block-dur">~1:15</span><span class="target">shipped</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">2:15&ndash;3:00</span><span class="micro-body"><strong>Checkpoint</strong><span>Status to Andrew &mdash; enrichment progress and how much of the approved backlog went out.</span></span></div>
+            <div class="micro-row"><span class="micro-time">3:00&ndash;3:05</span><span class="micro-body"><strong>Follow-up sheet housekeeping</strong><span>Backfill Last Touch Date on the 8 already-sent Tier 1 orgs if send dates are known &mdash; feeds the Follow-up due/issued cuts now live in overview-stats.</span></span></div>
+            <div class="micro-row"><span class="micro-time">3:05&ndash;3:30</span><span class="micro-body"><strong>Wrap-up &amp; check-out</strong><span>Log actuals against enrichment and sends (today's real numbers), EOD status, re-time Thursday and Friday using what actually happened.</span></span></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- THURSDAY -->
+    <section class="day" role="tabpanel" id="panel-thu" aria-labelledby="tab-thu" data-day="thu" hidden>
+      <h2 class="day-goal">Tier 3 fully drafted and sent to Andrew for approval. The afternoon went to tracker and pipeline integrity instead; the Tier 1 and Tier 2 sends move to Friday.</h2>
+      <p class="day-cap">9.5 hrs &middot; 9:30a to 7:00p &middot; late start, long finish</p>
+
+      <div class="blocks">
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Start-up, check-in &amp; Tier 3 drafting closed out</span>
+            <span class="block-right"><span class="block-dur">earlier today</span><span class="target">shipped</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">8:00&ndash;8:15</span><span class="micro-body"><strong>Start-up &amp; check-in</strong><span>Read the scoreboard, check-in to Andrew.</span></span></div>
+            <div class="micro-row"><span class="micro-time">Earlier today</span><span class="micro-body"><strong>Tier 3 drafting closed out</strong><span>All 50 Tier 3 orgs fully drafted in the Outreach Drafts #2 Google Doc, one tab per company. Wednesday's enrichment fixes held clean across the re-run.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Tier 3 sent to Andrew for approval</span>
+            <span class="block-right"><span class="block-dur">~0:30</span><span class="target">approval requested</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">Today</span><span class="micro-body"><strong>Batch posted to #vsw-future-planning</strong><span>All 50 drafts went to Andrew in Slack for approval, same review flow Tier 1 and Tier 2 went through. Three asks attached: sign-off on the drafts (including the added value sentence in paragraph 2), sign-off on the follow-up copy, and a decision on how warm contacts get screened.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Tracker integrity: cold vs. warm split, Tier 2 back-fill, stats rebuild</span>
+            <span class="block-right"><span class="block-dur">rest of the day</span><span class="target">shipped</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">Today</span><span class="micro-body"><strong>Tier and workstream separated</strong><span>The Tier column was carrying two facts at once, so a warm hand-off silently erased the tier and dropped the org out of the quota count. Already hit 6 rows, 5 fully enriched, 3 with drafts written. Tier is now immutable classification (Tier 1 to Tier 5, Warm removed), with new Workstream, Handed Off On, and Handed Off By columns alongside it. Backfilled all 413 rows: 407 cold, 6 handed off.</span></span></div>
+            <div class="micro-row"><span class="micro-time">Today</span><span class="micro-body"><strong>overview-stats rebuilt</strong><span>New QUOTA section reads Target, Delivered, Handed to warm, Closed, Still mine, Gap and % for every tier. Pipeline and Phase Cuts are now cold-only so handed-off orgs stop reading as stalled work. Drill-down gained a Workstream filter.</span></span></div>
+            <div class="micro-row"><span class="micro-time">Today</span><span class="micro-body"><strong>Found the counts were inflated</strong><span>Roughly 105 phantom rows below the real data had Status pre-filled to Sourced with no organization, padding the total from 413 to 498. Every count is now guarded, plus a new reconciliation line that surfaces rows holding an out-of-enum value instead of letting them vanish.</span></span></div>
+            <div class="micro-row"><span class="micro-time">Today</span><span class="micro-body"><strong>Tier 2 Drafted? back-filled</strong><span>Reconciled all 49 Tier 2 rows against the Outreach Drafts #1 doc and checked off the 48 with a real draft. Metro Vancouver is the one left false, its tab is an empty heading.</span></span></div>
+            <div class="micro-row"><span class="micro-time">Today</span><span class="micro-body"><strong>Week plan and EOD update</strong><span>Scoreboard and days brought current, all three copies of the plan re-synced, and the end-of-day status written up for Andrew.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-admin">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Admin</span>Follow-up sweep and close out</span>
+            <span class="block-right"><span class="block-dur">~0:45</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">Today</span><span class="micro-body"><strong>Follow-up sweep</strong><span>Work the follow-up-due view. Send everything that is owed one.</span></span></div>
+            <div class="micro-row"><span class="micro-time">3:15&ndash;3:30</span><span class="micro-body"><strong>Wrap-up &amp; check-out</strong><span>Log actuals, EOD status, set Friday's first task.</span></span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <p class="carry"><b>Pushed to Friday:</b> the Tier 1 and Tier 2 sends, and the Tier 3 batch contingent on Andrew's approval landing.</p>
+    </section>
+
+    <!-- FRIDAY -->
+    <section class="day" role="tabpanel" id="panel-fri" aria-labelledby="tab-fri" data-day="fri" hidden>
+      <h2 class="day-goal">The cold email side of Tier 1 to Tier 3 went out, 70 organisations. Andrew redirected the work toward sending, and the rest of the day went to Tier 4 groundwork and cleaning up the tracker.</h2>
+      <p class="day-cap">8:00a to 1:00p planned &middot; <b>the day did not run to plan</b> &mdash; Andrew's 9:18a note reordered it, and the follow-up system block was dropped</p>
+
+      <div class="blocks">
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Cold email outreach sent across Tier 1 to Tier 3</span>
+            <span class="block-right"><span class="block-dur">morning</span><span class="target">70 at Sent</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">Morning</span><span class="micro-body"><strong>Every cold email route in the three tiers went out</strong><span>Tier 1 &times; 8, Tier 2 &times; 31, Tier 3 &times; 31. Reported to Andrew and Vivian at 12:21p. The two Tier 2 email rows still unsent, Vancouver Tech Journal and VANTEC Angel Network, are warm hand-offs and are correctly excluded from cold sending.</span></span></div>
+            <div class="micro-row"><span class="micro-time">Still open</span><span class="micro-body"><strong>45 LinkedIn invitations sit with Vivian</strong><span>Per the split agreed on Jul 29, Tej owns email and Vivian owns LinkedIn connection invites. Those 45 rows are her queue, not a backlog on this side.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Andrew redirected the work</span>
+            <span class="block-right"><span class="block-dur">9:18&ndash;9:22a</span><span class="target">all drafts approved</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">9:18a</span><span class="micro-body"><strong>Send now, and focus on sending from here</strong><span>His words: get the invites out starting today and continue next week, minding that Monday is a holiday. From this point, focus on getting emails and follow-ups sent and meetings arranged.</span></span></div>
+            <div class="micro-row"><span class="micro-time">9:19a</span><span class="micro-body"><strong>On the tooling</strong><span>He does not mind technology supporting the process, but if it is making the process slower than doing it manually then it is not the best use of time.</span></span></div>
+            <div class="micro-row"><span class="micro-time">9:22a</span><span class="micro-body"><strong>Everything approved, including the follow-up copy</strong><span>Plus a standing instruction: when he supplies specific content, send it as drafted unless there is an actual error, rather than revising it and then waiting on approval for the revision.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Tier 4 groundwork</span>
+            <span class="block-right"><span class="block-dur">most of the day</span><span class="target">236 eligible, criteria locked</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">Today</span><span class="micro-body"><strong>Eligibility rule locked</strong><span>Mechanical, no judgment: cold workstream, not archived, no warm lead person, no warm flag. No filter on geography, category or source. Tej's call: Tier 4 is the next 100 we reach out to and the only bar is that they cannot be warm.</span></span></div>
+            <div class="micro-row"><span class="micro-time">Today</span><span class="micro-body"><strong>47 warm-signal organisations reviewed one at a time</strong><span>Three came back cold and re-entered the pool (Arc'teryx, BCBusiness, Techstars), two were archived (Granted, Simon Fraser University), and 42 were handed off to warm. 132 cells written, every one read back individually.</span></span></div>
+            <div class="micro-row"><span class="micro-time">Today</span><span class="micro-body"><strong>23 organisations checked against VSW's own sponsor history</strong><span>Their past-partner status had never been confirmed either way, and a past sponsor must not receive cold outreach. All 23 came back cold. 46 cells written and verified.</span></span></div>
+            <div class="micro-row"><span class="micro-time">Today</span><span class="micro-body"><strong>First Nations entities pulled out of the outreach tiers</strong><span>Swept the whole sheet rather than trusting the two names already known. Three exist; Squamish Nation and Tsleil-Waututh Nation were still live in the Tier 4 pool and were archived, with the reason appended to their notes rather than overwriting what was there.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Tracker repairs</span>
+            <span class="block-right"><span class="block-dur">today</span><span class="target">warm counts reconcile</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">Today</span><span class="micro-body"><strong>Six organisations that had lost their tier were restored</strong><span>Angel Forum, Greater Vancouver Board of Trade, Microsoft, Planet Food, The Forum and Voyager Capital were parked at a retired value during Thursday's migration. Each was traced back to the pass that set its real tier. Tier 3 now reads 53 delivered against a target of 50, which is correct under the new model.</span></span></div>
+            <div class="micro-row"><span class="micro-time">Today</span><span class="micro-body"><strong>Hand-off dates backfilled, and a stale value cleared off 405 rows</strong><span>A leftover FALSE made "not handed off" and "handed off, date unknown" impossible to tell apart. Blank now means one thing. All 8 warm rows carry a real date and no cold row carries one.</span></span></div>
+            <div class="micro-row"><span class="micro-time">Today</span><span class="micro-body"><strong>Outreach route values collapsed from 15 down</strong><span>Em-dash drift resolved across 10 cells. Five values held back deliberately, since collapsing them would lose a real distinction rather than a formatting one.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Metro Vancouver draft, and the booking calendar</span>
+            <span class="block-right"><span class="block-dur">today</span><span class="target">shipped</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">Today</span><span class="micro-body"><strong>Metro Vancouver written on an honest general angle</strong><span>Research found their mandate is water, waste, air quality, parks and regional planning. The startup and accelerator claim on their row actually belongs to Invest Vancouver. Rather than invent a hook to clear the personalization bar, the draft says plainly there is no specific program in mind and leans only on verified VSW facts. Flagged for Andrew, since it departs from his template on purpose.</span></span></div>
+            <div class="micro-row"><span class="micro-time">12:16&ndash;12:25p</span><span class="micro-body"><strong>Fixed the booking calendar with Vivian</strong><span>She found it was only offering 3:30p slots. Fixed the availability, then walked her through how a booking routes to whoever is free and how to block her own time with an override.</span></span></div>
+          </div>
+        </div>
+
+        <div class="block is-done">
+          <div class="block-head">
+            <span class="block-name"><span class="block-kind">Done</span>Next week planned, and the plan page became multi-week</span>
+            <span class="block-right"><span class="block-dur">afternoon</span><span class="target">Aug 3&ndash;6 built</span></span>
+          </div>
+          <div class="micro">
+            <div class="micro-row"><span class="micro-time">Afternoon</span><span class="micro-body"><strong>Aug 3 to 6 sized against a live read of the tracker</strong><span>The old scoreboard had drifted in every row. Rebuilt from a fresh read of all 413 organisations.</span></span></div>
+            <div class="micro-row"><span class="micro-time">Afternoon</span><span class="micro-body"><strong>Past weeks stay readable instead of being overwritten</strong><span>This page now holds every week, switched from the dropdown at the top. What you are reading is that archive.</span></span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <p class="carry"><b>Planned and not done:</b> the follow-up system block. Surfacing the response columns and wiring the Slack notification were both dropped when the morning went to sending. <b>Last Touch Date is still blank on all 70 sent rows</b>, which means no follow-up can come due for anyone and the day each message went out cannot be reconstructed from the record. That is the first thing to fix next week.</p>
+    </section>
+
+    </section>
+    <!-- ============================ END ARCHIVE ============================ -->
+
+    <div class="signoff">
+      <span>Tej Nathoo</span>
+      <span class="sep">&middot;</span>
+      <span>Vancouver Startup Week &mdash; Future Planning</span>
+      <span class="sep">&middot;</span>
+      <span>Updated Jul 31, 2026</span>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  (function () {
+    var plan = document.currentScript.closest('.plan') || document.querySelector('.plan');
+    var weeks = Array.prototype.slice.call(plan.querySelectorAll('.week'));
+    var picker = plan.querySelector('#wk-select');
+
+    var now = new Date();
+    var todayStr = now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0');
+
+    // Wire each week's day tabs independently, so two weeks in the DOM never
+    // fight over which panel is open.
+    weeks.forEach(function (week) {
+      var tabs = Array.prototype.slice.call(week.querySelectorAll('[role="tab"]'));
+      var panels = Array.prototype.slice.call(week.querySelectorAll('[role="tabpanel"]'));
+      var todayDay = null;
+
+      tabs.forEach(function (t) {
+        if (t.dataset.date === todayStr) {
+          todayDay = t.dataset.day;
+          var badge = document.createElement('span');
+          badge.className = 'today';
+          badge.textContent = 'Today';
+          t.appendChild(badge);
+        }
+      });
+
+      function select(day, focusTab) {
+        tabs.forEach(function (t) { t.setAttribute('aria-selected', String(t.dataset.day === day)); });
+        panels.forEach(function (p) { p.hidden = (p.dataset.day !== day); });
+        if (focusTab) {
+          var el = tabs.filter(function (t) { return t.dataset.day === day; })[0];
+          if (el) el.focus();
+        }
+      }
+
+      tabs.forEach(function (t, i) {
+        t.addEventListener('click', function () { select(t.dataset.day); });
+        t.addEventListener('keydown', function (e) {
+          if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+          e.preventDefault();
+          var dir = e.key === 'ArrowRight' ? 1 : -1;
+          var next = (i + dir + tabs.length) % tabs.length;
+          select(tabs[next].dataset.day, true);
+        });
+      });
+
+      select(todayDay || (tabs[0] && tabs[0].dataset.day));
+    });
+
+    function showWeek(key) {
+      weeks.forEach(function (w) { w.hidden = (w.dataset.week !== key); });
+      // Keep the control in sync whichever way the week got chosen. The
+      // attribute is toggled as well as the value so the selection is readable
+      // from the serialized DOM, not just from live element state.
+      if (picker) {
+        Array.prototype.forEach.call(picker.options, function (o) {
+          if (o.value === key) o.setAttribute('selected', '');
+          else o.removeAttribute('selected');
+        });
+        try { picker.value = key; } catch (e) { /* non-browser DOM */ }
+      }
+    }
+
+    // Always land on the newest week, which is the first one in the document.
+    // Deliberately not "the week containing today" — next week's plan is
+    // written and published before that week starts, and landing on it is the
+    // whole point. The archive is one click away in the picker.
+    var landing = weeks[0];
+
+    if (picker) {
+      picker.addEventListener('change', function () { showWeek(picker.value); });
+    }
+    showWeek(landing.dataset.week);
+  })();
+</script>
