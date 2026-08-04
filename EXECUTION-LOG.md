@@ -4816,3 +4816,47 @@ confirmed byte-identical (`sha256 8fccca4f…`, 155,342 bytes) with both meeting
 total present. Artifact republished to the same URL.
 
 **Flagged for Tej, not decided:** he has not RSVP'd to either invite. Both day panels say so.
+
+## 2026-08-04 (same day) — Travel removed from the meeting blocks; week back to 30.5 hrs
+
+Correction to the entry above. It budgeted the Fasken and RBCx meetings at 2:00 each on the assumption
+that in-person downtown meetings carry travel. **Tej: travel is not in the working day.** He is
+getting downtown and working from a café before 8:00a and heading back after 3:30p, so each meeting
+costs its hour and nothing more, and the working window stays 8:00a–3:30p.
+
+**That removes 2:00 of load.** Work owed from Tue 9:00a drops from 30:35 to **28:35**, against 29:00
+available at 7.5 hr days, so it fits on paper with **25 minutes of slack**.
+
+**The sequence is what does not fit, and that is the real finding.** Sends land last, and everything
+upstream has to clear first: routing before sending, enrichment before drafting. Thursday's capacity
+for draft-and-send, after finishing routing (1:30), clearing enrichment (3:15) and RBCx (1:00), is
+only **1:00, so ~15 sent**. That pushes **85 onto Friday**, which needs 6:10 of draft-and-send. Friday
+therefore runs to **4:00p** and its weekly review is trimmed from 1:55 to 1:05. Week lands at
+**30:30 rather than the 33:30** the travel assumption produced.
+
+Aggregate capacity is not the binding constraint here; the ordering is. Worth remembering the next
+time a day looks like it fits.
+
+**All four panels rewritten again:**
+
+- **Tue (7:30)** — Tier 4 selection 9:15, route batch 1 10:30–12:30 with the timed first 10 and the
+  re-time call at 11:35 (deliberately before Fasken). Tracker catch-up straddles the meeting,
+  12:30–1:00 for the Last Touch backfill then 2:00–3:00 for the bounces and follow-ups. Fasken
+  1:00–2:00, one block, no travel rows. Routes 20.
+- **Wed (7:30)** — the only meeting-free day, 5:45 of routing to **83**. Enrichment launches on the
+  **full 100 rather than the routed 83**, since enrichment needs the organisation and not the contact;
+  that decoupling is what lets Thursday finish routing and review enrichment on the same day.
+- **Thu (7:30)** — route the last 17 first, then enrichment review split around RBCx (9:45–11:00 and
+  12:00–2:00), then 15 sent. Carry note explains why only 15.
+- **Fri (8:00)** — 85 written and sent, 0:30 buffer as the week's only remaining slack, close trimmed
+  to 1:05.
+
+Hours grid back to 7.5 / 7.5 / 7.5 / 8, total **30.5 hrs, 0.5 over baseline**. Risk block restated:
+100 routes at 5 min/org is 8:20 of a 30:30 week with 25 minutes behind it; at 4 min it fits inside
+30 hrs, at 7 min Tier 4 lands nearer 70.
+
+Verified 11/11 sections, 277/277 divs, day totals 7:30 / 7:30 / 7:30 / 8:00. Deployed via
+`railway up --ci`; the log stream failed again and the deployment sat at `INITIALIZING` for 75s before
+building, reaching `SUCCESS` at ~210s — **slower than the ~45s seen earlier, so poll rather than
+assume a fixed wait.** Live confirmed byte-identical (`sha256 d01e3103…`, 154,387 bytes), travel rows
+absent, both meeting blocks present at 1:00. Artifact republished.
