@@ -4632,3 +4632,133 @@ Local was ahead of live for the length of this session, which is the drift state
 are all untracked in git. Every entry written today, the artifact source, and the build exist only on
 Tej's local disk. Deploying does not fix that, since the deploy path is a container image rather than
 a git push.
+
+## 2026-07-31 — overview-stats gains a send queue: Stage 3 split by who actually sends it
+
+**Ask (Tej):** track, per tier, how many outreach drafts he can send vs. how many Viv needs to
+send; make the drill-down able to pull the orgs behind each number; and make those numbers sum
+to ① STAGE 3's `· Approved — waiting to send` and `· Sent & waiting` rows.
+
+**Key decision — sender is DERIVED, not a new column.** The first proposal was a `Send By`
+dropdown column with a backfill. Tej rejected the premise: *"the send by is moreso based on the
+route. if it's an email route and is in the cold workstream - it's me. if it's in a linkedin dm
+in any workstream, it's viv."* So it is a pure function of `Outreach Route` (AT) — no new column,
+no backfill, and it can never drift out of sync with the route. Re-route an org and it re-assigns
+itself. Encoded as `SENDERS` in `scripts/build-overview-stats.ts`.
+
+Verified against all 118 Stage 3 rows before building. The rule covers them cleanly:
+
+| | Cold | Warm |
+|---|---|---|
+| `Email*` route → Tej | 70 | 2 |
+| `LinkedIn*` route → Viv | 45 | 0 |
+| `Contact Form` (Hanwha) | 1 | — |
+
+Route sub-variants ("Email (Work, Unverified Format)", "LinkedIn DM (Secondary)", …) are matched
+by **wildcard prefix** rather than enumerated, so a new sub-variant classifies itself.
+
+**Two judgment calls, both stated rather than assumed silently:**
+1. **`Contact Form` counts as Tej's** — it is a form he submits himself. One row (Hanwha).
+2. **The grid is cold-only, so it reconciles.** Tej's rule puts a LinkedIn route with Viv "in any
+   workstream", but ① is cold-only — a handed-off LinkedIn org would inflate Viv's column against
+   a Stage 3 total that excludes it. Kept out of the grid and surfaced on its own line below it
+   (`Viv — LinkedIn route, warm workstream`), so both statements stay true. 0 as of today.
+
+**Earlier hypothesis, discarded:** `Draft Variant` (BT) looked like the sender signal — 25 rows
+say "· Viv's profile" outright. It resolves only 97 of 117; the 18 Tier 3 rows carrying a plain
+"LinkedIn DM" name no profile at all, and 2 are blank. Deriving from a *text pattern in a draft
+label* would also have broken silently on any variant rename. Route is the real signal.
+
+**Built (`scripts/build-overview-stats.ts`):**
+- New **⑦ SEND QUEUE** block. Three phase grids (Approved / Sent / Bounced) × six tier rows ×
+  `Tej | Viv | Other | TOTAL | ① says | ⚠`. `Other` is computed **by subtraction**, so the three
+  sender columns always partition TOTAL exactly — the same technique ② uses for "Still mine".
+  A nonzero `Other` means a route outside both families (or blank), i.e. a data problem to look
+  at, never a silent reclassification into someone's queue.
+- **`⚠` is the reconciliation**, not decoration: every tier row and subtotal subtracts the real
+  cell in ①'s matching phase row (`meta.phaseRows` now records those row numbers at build time).
+  All 21 checks read 0 on the live rebuild. This is the same posture as ④'s "⚠ Unaccounted" —
+  a mismatch has to announce itself, because the 2026-07-30 rebuild lost 7 rows silently.
+- Drill-down (renumbered ⑦ → **⑧**) gained a fourth dropdown, **`Send by:`** at `H`
+  (All / Tej / Viv / Other), rather than a second drill-down — one place to pull org lists from.
+  It applies to any status, not just Stage 3.
+- `Refs` gained `route: rng("Outreach Route")`. Wildcard patterns become `LEFT()` prefix tests in
+  the `FILTER` array (`rMatch`/`anyOf`/`noneOf`) — `FILTER` takes boolean arrays, not COUNTIFS
+  criteria, so `"Email*"` passed through literally would have matched nothing.
+
+**Verified live** (drill-down driven by script, then reset): Approved+Viv → 45 counted / 45 listed;
+Sent+Tier 3+Tej → 31/31; Approved+Tier 1+Viv → 10/10; Sent+Other → 0. Approved+Tej returns 2 —
+correct, those are the two warm-workstream email rows, visible because Workstream was `All`.
+
+**Notable finding, worth watching:** today the sender split maps 1:1 onto the two phases — all 45
+`Approved` are Viv's LinkedIn DMs, all 70 `Sent`/`Bounced` are Tej's emails. So the entire
+waiting-to-send queue is currently blocked on Viv, and Tej has nothing waiting. The block will
+stop being redundant with ① the moment an email draft is approved.
+
+**Pre-existing data issue surfaced, NOT fixed** (needs Tej's call, it's a Status change):
+`master-prospects` row 11 **Adobe** has `Status="Drafted"`, which is not in the enum — the value
+is `Drafted — awaiting approval`. It is the 1 row behind ④'s `⚠ Unaccounted`, and it falls out of
+every stage bucket on the tab.
+
+## 2026-08-04 — Week shifted to Tue Aug 4 – Fri Aug 7; Tuesday gains a planning hour and a tracker catch-up block
+
+Monday Aug 3 (BC Day) was not worked. Tej asked to shift the whole week down and pick up Friday, mark
+this morning's planning hour as done, and add a block for spreadsheet catch-up plus follow-ups.
+
+**Capacity is unchanged.** The week is still 4 days and 30 hrs; Monday moved rather than disappearing.
+The only real cost is the planning hour, which comes out of routing.
+
+**Live re-read before touching anything, and the sheet had moved over the long weekend** (413 org rows,
+unchanged count):
+
+| | Fri Jul 31 | Tue Aug 4 |
+|---|---|---|
+| Status = Sent | 70 | 71 |
+| Status = Approved | 47 | 40 |
+| Replied | 3 | **6** |
+| Bounced | 1 | **7** |
+| Warm — handed off | 50 | 51 |
+
+Tier 1 now also carries `In conversation` and `Revisions requested`; Tier 2 a `Declined`. Tier 2 and
+Tier 3 `Sent` counts *fell* (31→28, 31→26) because `Status` is single-valued, so a bounce or reply
+moves a row out of `Sent` rather than adding to it. Scoreboard rewritten from this read, plus a new
+"Landed so far" row carrying 71 sent / 6 replied / 2 meetings / 7 bounced. **Tier 4 eligible pool
+unchanged at 236, 206 of them with no route and no contact.** `Last Touch Date` still blank on all 71.
+
+**The shift.** Day keys, tab ids, `data-date`s, panel comments and labels moved mon→tue, tue→wed,
+wed→thu, thu→fri, applied in reverse order through placeholders so the renames could not collide.
+Week section keyed `2026-08-04`, `data-end` `2026-08-07`, picker option relabelled. Hours grid: Mon 3
+becomes 0 hrs "BC Day — not worked", Fri 7 becomes a 7.5 hr working day. The Thursday 5:30p event note
+stays on Thu 6, which is the date rather than the content, so it moved off the day that is now Friday.
+
+**Tuesday, rebuilt.** New first block `Plan the week` (1:00, 8:00–9:00, marked done). Then a new
+1:30 `Tracker catch-up and follow-ups` block, sized rather than guessed:
+
+- `Last Touch Date` backfill on 71 rows (0:30) — **placed first because it is the dependency.** Tej
+  asked for follow-ups to be issued in this block, but the column is blank on all 71 rows, so the
+  follow-up view returns nothing and no follow-up can come due for anybody. Moved here from Wednesday.
+- Re-route the 7 bounces (0:35) — each is a message that reached nobody, and finding a fresh contact
+  is the same manual work as Tier 4 routing, roughly 5 min each.
+- OOO triage plus issuing the follow-ups the view now surfaces (0:25). Copy already approved Jul 31.
+
+Recommended 1:30 over Tej's 1:00 on that arithmetic; he had asked which.
+
+**The knock-on, recorded on the page rather than absorbed quietly.** The planning hour plus the 1:30
+block take 2:30 out of Tuesday's routing. Tuesday's route target drops **50 → 25**, and Wednesday now
+carries **75 routes in 5:15 of working time, which needs 4.2 min/org — faster than the 5 min the whole
+plan assumes.** Wednesday's day-cap says so explicitly and names itself the day carrying the week's
+risk. Tuesday's re-time step was rewritten from a useful check into the decisive one: if the timed
+first 10 come in at 5 min, the Tier 4 target drops to about 90 and the tail moves to Thursday, and
+that call gets made at 1:00pm Tuesday rather than Thursday night.
+
+All four days verified at exactly 7:30, week total 30:00, by parsing block durations out of the built
+file. Structure balanced (11/11 sections, 273/273 divs).
+
+**Deployed and verified.** `railway up --ci` from `web-week-plan/`. Build-log streaming failed with
+"Failed to retrieve build log" and the live site still served the old bytes two minutes later, which
+looked like a failure but was not — `railway deployment list --json` showed the deploy still
+`BUILDING`, then `DEPLOYING`, then `SUCCESS` at ~45s. **Poll deployment status rather than trusting a
+dropped log stream or an unchanged curl.** Live then matched local within 8s, byte-identical
+(`sha256 be80fe4c…`, 152,968 bytes). Content confirmed live: both meta lines, Tue–Fri tabs, the done
+planning block, the tracker block, Mon 3 at 0 hrs, Fri 7 working, and the refreshed bounce count.
+Claude artifact republished to the same URL.
