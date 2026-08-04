@@ -4762,3 +4762,57 @@ dropped log stream or an unchanged curl.** Live then matched local within 8s, by
 (`sha256 be80fe4c…`, 152,968 bytes). Content confirmed live: both meta lines, Tue–Fri tabs, the done
 planning block, the tracker block, Mon 3 at 0 hrs, Fri 7 working, and the refreshed bounce count.
 Claude artifact republished to the same URL.
+
+## 2026-08-04 — Fasken and RBCx meetings added; week extended to 33.5 hrs to hold 100 sent by Friday
+
+Two edits in one pass. First, Tej asked to drop the line "Tell him the week now runs Tuesday to Friday
+and that the 7 bounces need a decision on re-routing" from Tuesday's check-in. Removed from source,
+rebuilt, deployed. Then he sent two calendar invites and asked to fit them in **without losing the
+100-sent target**.
+
+**The meetings.** Both in person, downtown, both showing him as not-yet-RSVP'd:
+
+- **Fasken** — "Viv <> Mike", Tue Aug 4, 1:00–2:00p, FUNK Coffee Bar, 1025 Dunsmuir St. Organised by
+  `chair@vanstartupweek.ca`, with `mstephens@fasken.com`.
+- **RBCx** — "Coffee VSW<>RBCx", Thu Aug 6, 11:00a–12:00p, 49th Parallel Café, 689 Thurlow St.
+  Organised by Vallen Li, with Jason Yen and the VSW chairs.
+
+Both are organisations that replied to cold outreach, so they are the first two conversions the
+pipeline has produced. Budgeted at **2:00 each including travel both ways**, not 1:00, because they
+are in person and the travel is real time.
+
+**The arithmetic, done before touching the plan.** Work still owed from Tue 9:00a, using the week's own
+logged rates: tracker catch-up 1:30, Tier 4 selection 1:15, routing 8:20 (100 @ 5 min/org),
+enrichment launch 1:00, enrichment review 3:10, draft+send 7:10 (~4 min/org from Tier 3's 49-tab
+batch), weekly close 1:55, admin 2:15, meetings 4:00. **Total 30:35 against 29:00 available at 7.5 hr
+days — short by 1:35**, and the meetings are 4:00 of that load.
+
+**Holding 100 costs 3.5 hrs beyond the baseline.** Tue, Wed and Thu run to 4:30p and Fri to 4:00p, so
+the week is **33:30 rather than 30:00**, leaving 1:55 of slack. Recorded on the page in the goal block
+rather than absorbed silently, since extending Tej's week is his call to reverse.
+
+**All four day panels rewritten** rather than patched, since the meetings reorder the days:
+
+- **Tue (8:30)** — Tier 4 selection moves to 9:15 so routing can start at 10:30 and the **timed first
+  10 still finish before the meeting**; the re-time decision lands at 11:35, before lunch. Fasken
+  12:30–2:30. Tracker catch-up moves to the afternoon, 2:30–4:00. Route target 20.
+- **Wed (8:30)** — the only meeting-free day, so it carries **80 of the 100 routes** in a 6:45 block.
+  Its 11:30–3:00 sub-block is marked as the one that decides the week.
+- **Thu (8:30)** — enrichment review splits around RBCx (8:15–10:30, then 12:30–1:25). Draft and send
+  drops from 50 to **35**, with a carry note saying why. Day ends 4:30 for the 5:30p Luma event.
+- **Fri (8:00)** — picks up the remaining **65**, which is the block that takes Tier 4 to 100 sent.
+  The old standalone "Replies and meetings" block shrank to 0:45 since the two real meetings replace
+  most of it.
+
+**The risk moved.** Approval was resolved Jul 31, so the `.risk` block gained a second paragraph
+naming what the week now actually rests on: the route rate. At 4 min/org the week fits inside 31:45;
+at 5 min it needs the 33:30 written here; at 7 min Tier 4 lands nearer 70. **The measurement is this
+morning and the rest of the week gets rewritten off it at 11:35.**
+
+Verified: 11/11 sections, 283/283 divs, and each day's block durations summing to its stated length
+(8:30 / 8:30 / 8:30 / 8:00) by parsing the built file. Deployed via `railway up --ci`, deployment
+status polled to `SUCCESS` per the 2026-08-04 note above rather than trusting the log stream, live
+confirmed byte-identical (`sha256 8fccca4f…`, 155,342 bytes) with both meeting blocks and the 33.5 hr
+total present. Artifact republished to the same URL.
+
+**Flagged for Tej, not decided:** he has not RSVP'd to either invite. Both day panels say so.
