@@ -157,10 +157,23 @@ The clause fills two slots in one sentence, rendered as:
 
 > We've been following **`<ip>`** and your focus on **`[goal]`**.
 
-where `ip = [initiative].startsWith("your") ? [initiative] : "your work on " + [initiative]`.
-**Always render "your work on X", never "[Company]'s work on X"** — the possessive breaks on
-names ending in s ("Graphite Ventures's") and stutters when the initiative carries the org name
-("AWS's work on AWS Activate"). The "your work on" form fixes both at once.
+where:
+```
+possessive(name) = name.endsWith("s") ? name + "'" : name + "'s"
+ip = [initiative].startsWith("your")
+       ? [initiative]
+     : orgNameAppearsIn([initiative], company)
+       ? "your work on " + [initiative]              // stutter fallback, see below
+       : possessive(company) + " work on " + [initiative]
+```
+**Default to `[Company]'s work on X` (or `[Company]' work on X` for names already ending in
+"s" — "Graphite Ventures' work on...", "AWS' work on...", never "Graphite Ventures's" /
+"AWS's").** Fall back to **"your work on X"** only when `[initiative]` itself contains the org's
+name — e.g. AWS running a program literally called "AWS Activate" — because no possessive form
+fixes a name repeated twice in four words ("AWS' work on AWS Activate" still stutters). Locked
+2026-08-04 after Tej flagged that the earlier blanket "always your work on" rule over-corrected:
+the possessive-apostrophe bug (`Ventures's`) is a grammar fix, not a reason to drop the
+possessive construction Andrew's own template already uses for `[goal]`.
 
 **Hard invariants (a clause that fails any of these does not get written):**
 1. `[initiative]` is ONE noun phrase with **no internal " and "**, no appositive, no comma clause.
@@ -308,6 +321,102 @@ rewrite Viv into a different person.
   > partners and would love to connect and hear how our work can help you reach your goals."
   **This compression is a deviation from Andrew's literal text and needs his sign-off**, same as
   any new external copy — flag it, don't treat it as pre-approved.
+
+## LinkedIn connection note — canonical flow and drafting rule (locked 2026-08-04)
+
+**Applies every time a LinkedIn connection note gets drafted** — ad hoc in a Claude Code chat with
+Tej, or automated into the Future Planning - Outreach Drafts Google Doc. Same rule, same process,
+no exceptions for "it's just a quick one."
+
+**The rule:**
+1. **Hard cap: 300 characters, always.** Count it, don't estimate it.
+2. **Follow the canonical flow below** — a single connective clause, not two disconnected
+   statements. Two flat sentences ("You're running X." / "We're opening to partners.") read as
+   generic mail-merge; Andrew's original template earns its "reads well" quality from the "and"
+   joining the org fact to VSW's own move in one breath.
+3. **If a real variable value pushes the note over 300 chars, fix it in this order:**
+   - First, shorten the variable itself to a short hook (a few words, not the full
+     `[initiative]`/`[goal]` clause used in email) — see the existing LinkedIn render rule above
+     ("LinkedIn needs its own short hook/goal per org, not the email clause").
+   - Only if that's still not enough, compress the surrounding message wording (drop a word,
+     swap "and" for "&", tighten the identity clause) — never truncate mid-sentence and never
+     drop the CTA silently.
+4. **Before drafting, re-fetch the Stop Slop Guide live from Notion** (`5d33c81d-b930-419e-8557-41fbb4ec7629`,
+   see "The tone gate" above) and run the composed note through it: no em dashes, no vague
+   declaratives, no banned throat-clearing/meta-commentary phrases (including "caught our
+   attention" and its variants like "caught our eye"), active voice with a named actor, no leading
+   "I" in the first sentence.
+5. **Verify the char count and the gate pass before presenting or writing the note anywhere** —
+   this is part of the Definition of Done for any LinkedIn batch, same standard as the email
+   run-on/length checks already in that section.
+
+**Canonical flow** (supersedes the 2026-07-23 text above — that version is kept for history):
+
+> Hi [First name], we're expanding our tech & innovation week to larger partners & [Company]'s
+> focus on [goal] is a strong fit. I'm Vivian, co-chair. I'd love to connect & share how partners
+> use our platform for leadership visibility, talent branding & innovation engagement.
+
+Structure: **(1)** greeting, not leading with "I" — open with "we're expanding..." **(2)** one
+connective clause joining VSW's move ("expanding... to larger partners") to the org's own fact
+("and/& [Company]'s focus on [goal] is a strong fit") via "and"/"&", never as two flat sentences.
+**(3)** identity, kept short ("I'm Vivian, co-chair"). **(4)** CTA naming the concrete value
+(leadership visibility, talent branding, innovation engagement), not a bare "open to connecting?".
+
+For the initiative slot, use the same possessive logic as the email clause (see "Writing the
+clauses" above): default to `[Company]'s work on [initiative]` (apostrophe-only — `[Company]'` —
+for names already ending in "s"), and fall back to `your work on [initiative]` only when
+`[initiative]` itself contains the org's name (e.g. AWS' "AWS Activate" — no possessive form
+fixes a name repeated twice in four words). This is a per-org judgment call at fill time, not a
+single static phrase — check the actual company name and initiative before choosing which form
+to render.
+
+## Follow-up email copy (approved 2026-07-31; value-prop + CTA lines updated 2026-08-05)
+
+For any organization whose Tier 1/2/3 send has gone unanswered past the two-to-three-business-day
+follow-up window. Tej drafted this in the "Thread with Andrew" Notion page
+(`38e6b6f2b95b8068b183c49d924e5906`) on **2026-07-27** ("Draft available here, let me know if this
+is approved!"), re-flagged it for explicit sign-off on 2026-07-29, and Andrew approved it on
+**2026-07-31**: *"The messages you have drafted are approved, including the follow-up email
+draft."* Several lines were revised and re-approved by Tej on **2026-08-04**: "real fit" → "strong
+fit" in the fit paragraph, the CTA paragraph rewritten to name the actual value prop, and then
+that same paragraph **split in two** — the value-prop clause and the call-to-action were one long
+sentence, which buried the actual ask (the thing a follow-up most needs to land). Splitting them
+gives the ask its own short, direct sentence. Tej revised the same two paragraphs once more on
+**2026-08-05**: the value-prop line now says partners *accelerate their initiatives by using* the
+platform rather than *reach their organizational goals using* it, and the ask returns to the
+concrete "how our work can help you reach your organizational goals?" — the goals framing moves
+out of the value prop and into the ask, so the two lines no longer say the same thing. The version
+below is current; applies to every draft written from this point on, and all 51 drafts already in
+the two Outreach Drafts docs as of 2026-08-05 (7 Tier 1 + 44 Tier 2/3) were updated in place to
+match.
+
+**Use verbatim** — same standing as Andrew's Email A/B templates, not a per-org rewrite:
+
+> `{{first_name}}`,
+>
+> Following up on my note from `{{last_touch_date}}` about `{{organization_name}}` and Vancouver
+> Startup Week. Know things get busy, so wanted to bump this back up.
+>
+> Given `{{organization_name}}`'s focus on `{{goal}}`, we think there's a strong fit with the
+> founders and companies who show up at VSW each year.
+>
+> We're helping our partners accelerate their initiatives by using our platform for leadership
+> visibility, talent‑branding, and innovation‑focused engagement.
+>
+> If you're open to it, we'd love to set up a brief call to chat about how our work can help you
+> reach your organizational goals?
+>
+> Best,
+
+Placeholders: `{{first_name}}`, `{{last_touch_date}}`, `{{organization_name}}` — pulled from the
+tracker/original send. `{{goal}}` reuses the same `Their Goal (→[goal])` clause already written
+for that org's original draft — don't re-derive it.
+
+The CTA line already matches Andrew's 2026-07-23 revision to Email A/B verbatim (see "Locked
+messaging decisions" above), so a follow-up won't repeat the ask awkwardly against the original
+send. **This does not need re-approval per org** — Andrew's 2026-07-31 sign-off was blanket
+("please send the content out as drafted... unless there are actually errors"), so run the tone
+gate for grammar/personalization-fact correctness only, not a new content approval loop.
 
 ## Data-hygiene checks before drafting (flag, don't guess)
 

@@ -27,10 +27,15 @@ This is the **VSW Sponsor Sourcing pipeline** — a Slack-triggered intake servi
 | Past fit-research for a specific org | `docs/archive/fit-research/<org>-vsw-fit-research.md` (44 completed research docs) |
 | Any artifact, HTML doc, report or deck | [docs/design-system.md](docs/design-system.md) — typeface, colour tokens, build step |
 | Editing or planning the week plan | [docs/week-plan-operating-principles.md](docs/week-plan-operating-principles.md) — underpromise/overdeliver, explicit task breakdown, and the Deep Work / GTD / 4DX frameworks the structure is built on |
+| Editing one org's tab in an Outreach Drafts doc | [.claude/skills/outreach-doc-edit/SKILL.md](.claude/skills/outreach-doc-edit/SKILL.md) — which doc, how to find the tab (these are real Docs Tabs, not headings), and the Docs API pitfalls already hit once |
 
 ## Logging what got done
 
 When Tej asks for time-tracking bullets, says "here's what I got done", or asks you to audit a day or a week, invoke the **`work-log` skill** ([.claude/skills/work-log/SKILL.md](.claude/skills/work-log/SKILL.md)). It runs collect → corroborate → write: sweeps every source the work lives in (repo + EXECUTION-LOG, the live sheet, both Outreach Drafts docs, the Thread with Andrew page, Slack, the week plan, calendar), reconciles them against Tej's own recollection, then writes the bullets in his voice. Don't write the bullets straight from his rundown; the audit's whole value is the work he forgot to mention.
+
+## Editing a single org's outreach draft
+
+When Tej asks to re-route a bounced org to LinkedIn, add/update a LinkedIn draft for a specific company, or otherwise edit one org's tab in an Outreach Drafts doc, invoke the **`outreach-doc-edit` skill** ([.claude/skills/outreach-doc-edit/SKILL.md](.claude/skills/outreach-doc-edit/SKILL.md)) rather than rediscovering the doc structure from scratch. The short version: the sheet's `Draft Link` column has the exact doc+tab URL per org; each org is a real Google Docs Tab (`includeTabsContent: true`, walk `childTabs`), not a heading in a flat body — a plain `body.content` read silently returns nothing and looks like an empty doc.
 
 ## Visual work: use the project typeface
 

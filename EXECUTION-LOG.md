@@ -4860,3 +4860,506 @@ Verified 11/11 sections, 277/277 divs, day totals 7:30 / 7:30 / 7:30 / 8:00. Dep
 building, reaching `SUCCESS` at ~210s — **slower than the ~45s seen earlier, so poll rather than
 assume a fixed wait.** Live confirmed byte-identical (`sha256 d01e3103…`, 154,387 bytes), travel rows
 absent, both meeting blocks present at 1:00. Artifact republished.
+
+## 2026-08-04 — Last Touch Date backfilled on all 71 `Status = Sent` rows, from Tej's own send-date recollection, not reconstructed
+
+Live sheet check confirmed exactly 71 rows at `Status = Sent`, all 71 with a blank `Last Touch
+Date` (`BD`) — matching the week plan's Tuesday task exactly. Explored recovering real per-row send
+timestamps first (Notes column: no dates; `Draft Link`: one shared Google Doc across all 71 rows,
+differentiated only by tab, no per-tab send timestamp available via the Sheets API; Gmail: no access
+in this environment, consistent with the same finding logged 2026-07-28 and 2026-07-31). Started
+mining the sheet's own Drive revision history (33 saved snapshots since Jul 20) to bracket each row's
+`Status → Sent` transition, but Tej supplied the actual dates directly before that finished, so the
+revision-mining pass was killed mid-run without being used — better source, no reason to keep digging.
+
+**Dates written, per Tej:**
+- **Tier 1 & Tier 2, LinkedIn route → `2026-07-29`** (10 rows: AWS, Kensington Capital Partners,
+  KPMG, Rhino Ventures, TD, TELUS Global Ventures, TELUS Pollinator Fund, Top Down Ventures, Vancity,
+  Accenture).
+- **Tier 1, non-LinkedIn (email) route → `2026-07-22`** (8 rows: City of Vancouver, CVCA, EY,
+  National Bank of Canada, Sequoia Capital, Trade and Invest BC, Valhalla Private Capital, Version
+  One Ventures).
+- **Tier 2 & Tier 3, non-LinkedIn route → `2026-07-31`** (53 rows) — sourced from Tej's own Slack
+  message, last Friday 12:21p: *"All emails from Tier 1 through Tier 3 have been sent out."*
+
+10 + 8 + 53 = 71, reconciling exactly against the 17/28/26 Tier 1/2/3 `Sent` counts already on the
+scoreboard, with zero left unclassified.
+
+**Written via `master-prospects!BD<row>` batch update** (`valueInputOption: RAW`, plain ISO strings
+`YYYY-MM-DD` — matches the one pre-existing real date already in that column, row 20's
+`"2026-07-15"`, rather than the free-text style some other rows carry, e.g. `"Emailed him July 14"`).
+**Read back every one of the 71 written cells individually** by exact cell address via a single
+`batchGet` (not a row range, and not just trusting the write response's `totalUpdatedCells: 71`) —
+zero mismatches. First read-back attempt did 71 separate `values.get` calls and hit the Sheets API's
+60-reads/minute quota; redone as one `batchGet` call across all 71 ranges, which is now the pattern to
+reuse for any future read-back over more than a handful of cells.
+
+Only `Last Touch Date` was written — `Last Touch Channel` was deliberately left alone, since that
+wasn't part of what Tej asked for and the standing trigger for ongoing sends already scopes each
+update to exactly what changed.
+
+## 2026-08-04 — Added `OOO` as a Status value, wired into overview-stats the same way `Bounced` already was
+
+Tej wants Bounced and OOO (out-of-office auto-replies) to show up as live to-do-list metrics in
+`overview-stats`, reconciling "net 0" as each row moves on — accounting framing, but the mechanism
+underneath doesn't need a ledger: `Bounced` already behaves exactly this way (a plain live `COUNTIFS`
+on `Status`, so the count rises when a row is tagged and falls the moment `Status` changes away from
+it). `OOO` just needed the same plumbing `Bounced` already has, not new machinery.
+
+**`master-prospects!A` (Status) dropdown** — added `OOO` to the `ONE_OF_LIST` data validation,
+positioned between `Sent` and `Bounced` (both are "something happened to a sent email that isn't a
+real answer yet"). Reapplied over the full existing range (`A3:A50482`, `strict: true`,
+`showCustomUi: true`) so the enum extends without narrowing whatever range was already validated.
+
+**`scripts/build-overview-stats.ts`** — added `S.ooo = "OOO"` and threaded it through every block that
+already carried `Bounced`, so it's not a bolt-on: Stage 3 pipeline phase (①, new "Out of office" row
+between "Sent & waiting" and "Bounced"), the Stage-3 cohort bucket in ③ ("Still in initial outreach"
+now includes OOO), the phase-cut to-do list in ⑤ (new "Out of office" row, and added to "Response
+received" alongside Bounced — an autoreply is still "we heard something back", same logic Bounced
+already got), and the send-queue reconciliation in ⑦ (new S3_PHASES entry, same label text as ①'s
+phase row so it reconciles cell-for-cell, ⚠ column confirmed 0 after rebuild). ⑥ CUMULATIVE was left
+alone — that block runs off sticky historical flags (`Bounced?`, `Replied?`, etc.) for lifetime rates,
+and Tej only asked for a live current-state queue, not a lifetime OOO rate; a sticky `OOO?` flag is a
+five-minute follow-up if he wants that later, not built now since it wasn't asked for.
+
+**Deliberately not built:** a sticky "ever OOO'd" checkbox column (would enable a `⑥`-style lifetime
+OOO-rate metric, mirroring `Bounced?`). Flagged, not added — YAGNI until Tej asks for the rate, not
+just the queue.
+
+Rebuilt `overview-stats` (147 rows, was 137) and verified live: "Out of office" phase-cut reads 0
+(no rows tagged yet, correct), Stage 3 total unchanged (111, since 0 rows moved into the new bucket),
+⑦'s reconciliation ⚠ column stayed 0 in every row including the new "Out of office" one, and the
+drill-down Status dropdown (`overview-stats!B144`) now lists `OOO` alongside every other status.
+`npx tsc --noEmit` clean before running.
+
+### 2026-08-04 — LinkedIn re-route after email bounce: Sanctuary AI, SRED.ca, Sparkbridge; new canonical LinkedIn template locked; new `outreach-doc-edit` skill
+
+**New canonical LinkedIn connection-note flow locked**, replacing the 2026-07-23 text in
+`docs/outreach-copy-playbook.md`. Built interactively with Tej over several iterations (flow
+needed to read as one connective clause like Andrew's original email line, not two flat
+sentences; "&" swapped in for "and" to buy back character budget; possessive-form logic refined
+so `[Company]'s work on X` is the default and `your work on X` is a scoped fallback only for the
+case no possessive form fixes — the initiative literally repeating the org's own name). Full rule
+and worked example written into the playbook's new "LinkedIn connection note — canonical flow and
+drafting rule" section, including the fix-order for when a real variable value pushes a note over
+300 chars.
+
+**Re-routed three bounced-email orgs to LinkedIn DM** in the Outreach Drafts docs, applying the
+"Re-routed after email bounced" tab convention Tej originated by hand on Sanctuary AI:
+- **Sanctuary AI** (Drafts #2) — replaced the old-template LinkedIn note with the new canonical
+  one; page-break structure was already correct from Tej's manual edit.
+- **SRED.ca** (Drafts #2) — built the re-route block from scratch (heading, hyperlinked LinkedIn
+  URL, note, two page breaks bracketing the moved "Email A / community@" heading) to match
+  Sanctuary AI's structure.
+- **Sparkbridge** (Drafts #2) — same treatment, but first resolved a blocker flagged in the doc
+  since 2026-07-30: the row named **Ken Sugimoto** as contact while the LinkedIn URL on file
+  belonged to **Hamid Chavoshi** — a name/contact mismatch the playbook requires stopping and
+  flagging rather than guessing. Tej confirmed Hamid Chavoshi, Co-Founder & CEO, is correct.
+  Sheet (`master-prospects` row 311) updated: `Primary Contact Name` → Hamid Chavoshi, `Title` →
+  Co-Founder & CEO, `LinkedIn URL` → `https://www.linkedin.com/in/hamidchavoshi` (was missing its
+  protocol), `Outreach Route` → `LinkedIn DM` (was `Email (Generic Inbox)`). All four cells read
+  back individually to confirm. Sparkbridge is a **past VSW sponsor** (`VSW: TRUE`, sponsored
+  2025), so per the playbook's re-engagement rule the note uses the re-engagement opener
+  ("Sparkbridge supported us in 2025...") rather than the cold "we're expanding..." flow — same
+  canonical-flow discipline (300-char cap, Stop Slop pass) applied to that variant for the first
+  time. The tab's own "Flags" section had a stale mismatch note; replaced with a dated resolution
+  line rather than deleted, so the tab keeps a record of what was wrong and how it was fixed.
+
+**Docs API bugs hit and fixed live, all against the real docs (no staging environment for this):**
+- Inserting a new multi-paragraph block immediately before an existing `HEADING_1` paragraph
+  makes Google Docs apply `HEADING_1` to the *entire* inserted block by default, not just the
+  intended heading line. Caught on SRED.ca (note text rendered as a giant heading) and again on
+  Sparkbridge; fixed by explicitly forcing `NORMAL_TEXT` on every non-heading line in the block,
+  writing the request from the start on the Sparkbridge pass instead of patching after the fact.
+- A `NORMAL_TEXT` reset range that ran one paragraph too far flattened the next real heading too
+  (SRED.ca's "Email A / community@") — needed a second corrective `updateParagraphStyle` call.
+  Read every paragraph's style back after any bulk style change, not just the ones intended to
+  change.
+- Chaining two `insertPageBreak` calls in one `batchUpdate` using hand-computed indices is fragile
+  — the first insertion shifts every index after it, and a second index computed *before* that
+  shift lands wrong. This bit twice: once as a duplicate page break on Sanctuary AI (Tej had
+  already inserted one by hand; mine landed as a redundant second one between his existing pair
+  and had to be deleted), and once on Sparkbridge where the miscomputed index landed one character
+  early and literally split the heading text in half ("Email B / communit" / page break / "y@").
+  Both required a follow-up read-back-and-fix pass. Fixed on Sparkbridge by reordering: when two
+  page breaks must land in one document region, insert the higher (later) index first, then the
+  lower one, so the earlier insertion is never invalidated by the later one.
+- Also newly documented: each org's content lives in a real Google Docs **Tab** object
+  (`documents.get({ includeTabsContent: true })`, walk `childTabs`, match by
+  `tabProperties.title`), not a heading inside one flat document body. A plain `body.content` read
+  silently returns nothing for every org and looks like an empty doc rather than erroring — this
+  is what actually cost the most time this session, before any of the page-break bugs above.
+
+**New `.claude/skills/outreach-doc-edit/SKILL.md`**, so none of the above has to be rediscovered
+next time: how to find the right doc + tab (the sheet's `Draft Link` column has the exact URL;
+Tier 1/2 → Drafts #1, Tier 3 → Drafts #2 as fallback), the Tabs-API gotcha, every pitfall above,
+and the two-page-break tab convention. Cross-linked from `CLAUDE.md`'s file map and from
+`docs/outreach-copy-playbook.md`.
+
+## 2026-08-04 — Follow-up email template added to the playbook; Tier 1 follow-up drafts written (7 orgs)
+
+**Sourced the approved follow-up template from the "Thread with Andrew" Notion page**
+(`38e6b6f2b95b8068b183c49d924e5906`): Tej drafted it 2026-07-27, re-flagged for explicit sign-off
+2026-07-29, and Andrew approved it 2026-07-31 ("The messages you have drafted are approved,
+including the follow-up email draft"). Written into `docs/outreach-copy-playbook.md` as its own
+section — use verbatim, `{{goal}}` reuses the row's existing `Their Goal` clause, no per-org
+re-approval needed since Andrew's sign-off was blanket.
+
+**Built today's follow-up worklist by cross-checking the sheet against live Gmail, not the sheet's
+manual `Bounced?`/`Replied?` flags alone** (those columns are hand-set, not formulas, so they can
+drift). Found: 7 real bounces and a Dell reply (Olivia Miles asking to book a call) that the sheet
+already correctly reflects; confirmed **SFU VentureLabs' actual thread contact is Ryan
+(`ryan@venturelabs.ca`), not Grace Sullivan** as the row lists — his OOO ("traveling through
+August 3rd") means he's back, but the sheet's contact field is stale; and 4 more OOO contacts
+(Aon, Global Affairs Canada, PacifiCan, Rogers) confirmed still away with specific return dates.
+Two rows (Hanwha — Contact Form route, no Gmail trail; Superhuman — no contact on file, no
+matching send found) couldn't be verified and were held out pending manual check. Full list
+reported to Tej; not re-transcribed here since the sheet is authoritative and this was a
+point-in-time snapshot.
+
+**Wrote follow-up drafts for the 7 Tier 1 orgs** (Valhalla, EY, CVCA, National Bank of Canada,
+Sequoia Capital, Trade and Invest BC, City of Vancouver — Version One Ventures excluded per Tej,
+Viv is reaching out there directly) into Outreach Drafts #1
+(`1Op9-2WQZYCjZ6GQKL0PVMi9OojzgKVuUxHhJqeZ8QTk`), one org per tab via the `Draft Link` column.
+Each tab gets a new `"{Org}: Follow Up"` `HEADING_1` + the filled-in template as normal-text
+paragraphs, inserted at the top of the tab (index 1) ahead of the original draft — same
+insert-then-restyle approach as the LinkedIn re-route work above (insert the whole block, force
+`NORMAL_TEXT` over the full inserted range, then re-apply `HEADING_1` to just the heading line, so
+the original draft's own heading below is never touched). No page break used this time — Tej's ask
+was a simple header + body, not the fuller re-route convention. Read every tab back after writing
+to confirm paragraph styles landed correctly and the original draft heading/table below was
+undisturbed.
+
+**Greeting logic:** matched whatever the actual sent email used (checked via Gmail, not assumed
+from the sheet) — "Hello," for City of Vancouver (sent to a generic shared inbox, no confirmed
+named reader), first name for the other six. Caught one live discrepancy along the way: Valhalla's
+doc tab still shows a stale "To: rthompson@... / Contact: Randy Thompson" table from before the
+contact was swapped to Grant Lawrence — the actual 2026-07-22 send (confirmed via Gmail) went to
+`grant.lawrence@valhallaprivatecap.com`, so the follow-up correctly greets "Grant," but the tab's
+own header table is out of date and worth a fix pass later (not corrected here, out of scope for
+this task).
+
+### 2026-08-04 (same day) — Follow-up template CTA and fit line revised, re-approved, applied retroactively
+
+Tej revised and got approval on two lines in the follow-up template: the CTA paragraph now names
+the actual value prop ("...how we're helping our partners reach their organizational goals using
+our platform for leadership visibility, talent‑branding, and innovation‑focused engagement.")
+instead of the generic "how our work can help you reach your organizational goals?", and "real
+fit" → "strong fit" in the paragraph above it. `docs/outreach-copy-playbook.md`'s follow-up
+section updated to the new canonical wording — applies to every draft from here on, no per-org
+re-approval needed (same standing as the original 2026-07-31 approval).
+
+Applied both edits retroactively to the 7 Tier 1 drafts already written today (targeted
+delete-then-insert on just the changed span, not a full paragraph rebuild, so paragraph styling
+was never touched). Two of the seven — City of Vancouver (CTA line) and CVCA ("real fit" line) —
+showed the *already-updated* text on the very first read-back before any edit request was sent for
+that specific line, for reasons not fully understood (possibly Docs API smart-quote/content
+normalization on the original insert, though that doesn't fully explain it); script logged these
+as "not found" and skipped them rather than double-writing. Read every one of the 7 tabs back
+after the run and confirmed all 7 carry identical, correct text for both the fit line and the CTA
+line — the anomaly didn't produce any wrong or duplicated content, just an unexplained head start
+on 2 of the 7.
+
+**Follow-up, same day: CTA split into its own sentence.** Tej flagged that the CTA paragraph —
+value prop and the actual ask fused into one long sentence — buried the ask, which is the one
+thing a follow-up most needs to land clearly. Agreed and split it: the value-prop clause now
+stands alone, followed by a blank line, followed by a short direct ask ("If you're open to it,
+we'd love to set up a brief call to chat about how this could work for you?"). No new content
+invented — same approved wording, just given its own sentence. Updated
+`docs/outreach-copy-playbook.md`'s canonical template and all 7 Tier 1 doc tabs (this time all 7
+matched and updated cleanly on one pass, no repeat of the earlier already-updated anomaly). Read
+all 7 back — value-prop paragraph, blank spacer, ask paragraph, all `NORMAL_TEXT`, original draft
+heading below each one undisturbed.
+
+## 2026-08-04 — Tier 4 finalized to 100 and written to the sheet (100 cells)
+
+Closes out the selection stage opened 2026-07-31. Tej reviewed the proposed 100
+(`tier4-proposed.md`/`.csv`) and made two calls, then the finalized list was tagged live.
+
+**Tej's cuts.** Seven broad institutions — University of Alberta, University of Toronto, Province
+of British Columbia, The University of British Columbia, University of Calgary, City of Toronto,
+Government of Canada — pulled for being too large to sponsor as a single entity; each has multiple
+departments/boards that need identifying individually first. All seven, plus Queen's University
+(cut from the reserve pool on the same basis), were already flagged as broad-org candidates in
+`docs/broad-org-breakdown-candidates.md`.
+
+**Caught while backfilling, not part of Tej's list.** Squamish Nation and Tsleil-Waututh Nation
+were both in the proposed 100 but had already been archived on 2026-07-31 (First Nations
+relationships run through protocol channels, not cold outreach — logged earlier the same day). The
+proposal was scored before that archival ran and never got refreshed, so it still carried both.
+Pulling them was just applying the already-locked `Status = Archived` exclusion to stale data, not
+a new judgment call.
+
+**Backfill.** All 9 freed slots filled from the reserve list in rank order, skipping Queen's:
+Motrec, Northrop Grumman, NRC IRAP, Portage Ventures, SAIT, Schwarzman Scholars, Shopify Ventures,
+Shred Capital, Stan. Reserve dropped from 20 to 10. `tier4-proposed.md`/`.csv` rewritten to reflect
+the final 100 and updated category mix (Tech 28→30, Gov 11→7, University 7→5, VC 6→9, Defense &
+aerospace 3→4) — done programmatically (parse CSV, drop excluded orgs, promote from reserve in
+score-then-alphabetical order, re-rank 1–100) rather than hand-edited, to avoid transcription
+errors across a 100-row table.
+
+**The write.** Matched all 100 finalized org names against a fresh live read (not the stale
+`Row` numbers baked into the Jul 31 CSV) — 100/100 matched, zero collisions with the eligibility
+gate (none already tiered, archived, warm, or off the `Cold` workstream). `Tier` (`BI`) →
+`Tier 4` on all 100, `values.batchUpdate` (`USER_ENTERED`). Read back individually by exact
+cell address — 100/100 verified (batched into one `batchGet` call after the first individual
+read-back loop hit the Sheets API's per-minute read quota). Live tier distribution after:
+Tier 1 23, Tier 2 50, Tier 3 53, **Tier 4 100**, untiered 187.
+
+Temp scripts (`tag_tier4.ts`, `tag_tier4_write.ts`, `tag_tier4_verify.ts`) run via `npx tsx` and
+deleted, never committed.
+
+## 2026-08-04 — Outreach Drafts #3 created: 100 empty tabs, one per Tier 4 org, alphabetical
+
+Tej shared a new doc, **Future Planning - Outreach Drafts #3**
+(`1IwXVxAXN99FNsRBuzxjX8h2sZfQ3N5BGKkU6sX60f84`), with the service account and asked for one tab
+per Tier 4 org, alphabetical, content left empty — the drafting-stage scaffold, matching Drafts
+#1/#2's per-org-tab structure for Tier 1–3.
+
+**Discovered mid-run: Google Docs caps a document at 100 tabs total.** The doc already had a
+default tab renamed "Tier 4", matching Drafts #1/#2's convention of a tier-level parent tab
+("Tier 1 (20)", "Tier 3 (50)") with org tabs nested as `childTabs`. Followed that convention first
+— renamed it to "Tier 4 (100)" and started nesting orgs underneath — but the parent tab itself
+counts against the 100-tab cap, so at 100 orgs there's no room left for the wrapper (100 orgs + 1
+parent = 101). Flagged to Tej; his call was that all 100 should fit, which only works without a
+wrapper tab consuming a slot. **Resolution: dropped the parent-tab convention for this doc — all
+100 orgs are flat, top-level tabs, no grouping tab.** Deviates from Drafts #1/#2's structure,
+recorded here so a future read of this doc isn't confused by the inconsistency.
+
+**One tab title shortened.** Docs also enforces a 50-character tab-title cap. "Innovation for
+Defence Excellence and Security (IDEaS) and Innovation Solutions Canada" (86 chars) doesn't fit;
+shortened to **"IDEaS / Innovation Solutions Canada"** for the tab label only — the sheet's
+`Organization Name` cell still carries the full official name, and `tier4-proposed.md`/`.csv`
+were left untouched (the shortening is a Docs-tab-only constraint, not a sheet fact).
+
+**Build sequence, since the 100-tab cap meant the doc had to stay at or under 100 the entire time:**
+added a throwaway root tab first so the mis-structured "Tier 4 (100)" parent (with its 85
+already-created children) could be deleted without hitting "can't delete a doc's last tab";
+deleted it (cascaded its children); added all 100 orgs as flat root tabs across several
+`batchUpdate` calls (Docs batches are atomic per call — a batch that includes an invalid request,
+like the over-length title, rolls back entirely, which is what surfaced both the length cap and
+the tab-count cap as clean, isolated failures); freed one more slot by deleting the throwaway tab
+partway through since 99 orgs plus the placeholder was already at the ceiling; added the last org
+after that. `addDocumentTab` requests were sent in alphabetical order with no batch larger than 20,
+each `batchUpdate` call landing them in that order at the root.
+
+**Verified:** live tab list read back — 100/100 tabs present, titles match the finalized Tier 4
+list exactly (including the shortened IDEaS entry), zero missing, zero unexpected, order matches
+the target alphabetical list exactly, and no nested/child tabs remain (confirming the parent-tab
+cleanup was complete, not partial).
+
+Temp scripts (`create_tier4_tabs.ts`, `shorten_and_continue.ts`, `check_current_tabs.ts`,
+`rebuild_flat_tabs.ts`, `finish_flat_tabs.ts`, `verify_final.ts`) run via `npx tsx` and deleted,
+never committed.
+
+## 2026-08-04 — BRP archived out of Tier 4 (no fit), backfilled with Startup Canada
+
+Tej: "no fit," no reason tied to the scoring formula — a judgment call on the org, not the method.
+
+**Sheet.** Fresh live read found `BRP` (row 65) already `Status = Archived` — Tej had made the
+change himself directly in the sheet before messaging (per the standing note that he edits the
+sheet live). Appended a dated `Notes` entry recording the reason and the backfill, since there
+wasn't one yet. **`Tier` was left as `Tier 4`, not blanked** — `overview-stats` tracks `Archived`
+as a terminal outcome within a tier's total, the same pattern as `Bounced`/`Declined` (see
+`scripts/build-overview-stats.ts`'s per-tier `TERMINAL` status breakdown), so untiering would be
+inconsistent with every other dead-end status in that column. Backfilled with the next reserve
+org, **Startup Canada** (rank 100 pre-backfill, tied at the 38-point cut) — matched fresh against
+the live sheet (untiered, not archived, no warm signal, `Cold` workstream), `Tier` → `Tier 4`,
+read back and verified.
+
+**`tier4-proposed.md`/`.csv`** rewritten the same way as the 2026-08-04 broad-org backfill: BRP
+dropped from the 100, Startup Canada promoted from reserve, table re-ranked (score desc, then
+alphabetical), category mix recomputed (Accelerator 4→5, Consumer brand 5→4), reserve now 9 deep
+instead of 10.
+
+**Outreach Drafts #3** kept in sync: deleted BRP's tab, added `Startup Canada` at the correct
+alphabetical position (`index` set to land directly after `Stan`, before `TAP Network`, rather
+than appending at the end and letting order drift). Read the tab list back — 100/100 tabs, correct
+order, BRP absent, Startup Canada present between its two neighbors.
+
+Temp scripts (`archive_brp.ts`, `backfill_startup_canada.ts`, `swap_tab.ts`) run via `npx tsx` and
+deleted, never committed.
+
+## 2026-08-04 — Convergence (CC Tech) handed off to warm, backfilled with Thales
+
+Tej: "handed off convergence to warm. backfilled it." Investigated before acting, since the second
+half read as either something already done or an instruction — the org name also didn't match
+anything in the Tier 4 list at first glance.
+
+**Identity resolved first.** No org named exactly "Convergence" exists; `master-prospects` row 72
+is `Convergence (CC Tech)`, which the Tier 4 proposal had listed under its shorter form, `CCTech`
+(rank 19 in the original 100, score 54). Confirmed by matching the CSV's cached `Row` number (72)
+against the live row.
+
+**Sheet already reflected the handoff** — `Workstream` was `Warm — handed off` and `Tier` was
+already blank on a fresh read, meaning Tej made both changes directly in the sheet before
+messaging (consistent with the BRP pattern earlier today). Appended a `Notes` entry documenting
+the handoff and the backfill, since neither `Handed Off On` nor `Handed Off By / Why` had been
+filled in.
+
+**Checked whether "backfilled it" meant a replacement had already landed — it hadn't.** Live
+`Tier 4` count read 100, which looked complete, but that included `BRP` (archived, kept tiered per
+the earlier entry) — counting only `Workstream = Cold` and `Status ≠ Archived` rows tagged
+`Tier 4` gave **99 active**, one short. Diffing the live 100 against the proposal's 100 (accounting
+for an unrelated live rename — `BCIT Commercialization Assistance Program` now carries a longer
+official name in the sheet, `// Applied Research Liaison Office (ARLO)`, not a Tier 4 change)
+confirmed no new org had actually been added. Backfilled with the next reserve org, **Thales**
+(rank 100, 38 points) — matched fresh against the live sheet (untiered, not archived, no warm
+signal, `Cold` workstream), `Tier` → `Tier 4`, verified.
+
+**Untiered rather than left tagged, unlike the BRP archive.** A warm handoff is a genuine exit from
+the Cold cohort — someone else now owns the relationship — not a terminal outcome tracked within
+the tier's count the way `Archived`/`Bounced`/`Declined` are. Leaving `Tier 4` in place would have
+misrepresented it as still active in cold outreach.
+
+**`tier4-proposed.md`/`.csv`** rewritten the same way as the two prior backfills: CCTech dropped,
+Thales promoted from reserve, re-ranked, category mix recomputed (Tech 30→29, Defense & aerospace
+4→5), reserve now 8 deep.
+
+**Outreach Drafts #3** kept in sync: deleted the `CCTech` tab, added `Thales` at the correct
+alphabetical position (between `TC Energy` and `Techcouver`). Read back — 100/100 tabs, correct
+order, CCTech absent.
+
+Temp scripts (`find_convergence.ts`, `find_cctech.ts`, `check_tier4_count.ts`, `diff_tier4.ts`,
+`active_tier4_count.ts`, `backfill_thales.ts`, `note_convergence.ts`, `swap_tab2.ts`) run via
+`npx tsx` and deleted, never committed.
+
+## 2026-08-04 — Tier 2/3 follow-up drafts written (44 orgs, both Outreach Drafts docs)
+
+Continues the Tier 1 batch of 7 written earlier today (see "Follow-up email template added to the
+playbook" above). Same approved template, same tab convention, same insert-then-restyle mechanics.
+
+**Worklist.** 44 orgs across Tier 2 and Tier 3, all sent 2026-07-31, all re-verified live before
+drafting: `Sent?=TRUE`, `Bounced?=FALSE`, `Replied?=FALSE`, `Workstream=Cold`, `Handed Off On`
+blank. Two rows carried in the same sweep were **held out** — Hanwha (`Outreach Route` is
+`Contact Form`, so there is no Gmail trail to verify a send against) and Superhuman (no contact on
+file; its 7/31 send actually went to `affiliate_mktg@grammarly.com` under the subject
+"Reconnecting after Grammarly's support of Vancouver Startup Week", which needs Tej's call on
+whether the follow-up should address Grammarly rather than Superhuman).
+
+**Greeting and send address verified against live Gmail for all 44, not the sheet.** Every one of
+the 44 sends was located in `in:sent` for 2026-07-31 and its opener read off the actual message
+body. 36 got a first-name greeting, 8 opened "Hello," (Aritzia, CFIN, Dapper Labs, Kraken
+Robotics, Pomerleau, Teralys Capital, Vanedge Capital, WorkSafe BC) — reproduced exactly as sent.
+Two sheet-vs-Gmail discrepancies caught and resolved off Gmail: **Amazon**'s `Email` cell holds
+the note text `allisonl@amazon.com seems to be valid` rather than a clean address (the real send
+went to `allisonl@amazon.com`, greeting "Allison,"), and **CFIN**'s row names Mona Afrouz as
+primary contact but the send went to the `info@cfin-rcia.ca` shared inbox opening "Hello," — the
+follow-up matches the send, not the row. Also noted: **A100**'s send opened "Hi Tamara," (the only
+one of the 44 with a "Hi"); the follow-up uses the bare "Tamara," that the Tier 1 batch and the
+approved template both use.
+
+**`{{goal}}` taken from the sheet's `Their Goal (→[goal])` column per Tej's instruction.** For 40
+of the 44 that clause is identical to the one in the original draft/send. **Four have since
+drifted** and the follow-up therefore states a different (still accurate) goal than the recipient
+read on 7/31 — flagged rather than silently reconciled: Graphite Ventures (sent "backing Canadian
+founders like ENVGO to build sustainably and scale globally" → sheet "backing capital-efficient
+Canadian B2B founders to scale globally"), Northleaf Capital Partners (sent "backing mid-market
+companies and the managers building them" → sheet "opening the private-equity asset class up to
+more Canadian investors"), Yaletown Partners (sent "emerging BC technology companies" → sheet
+"innovative technology companies"), WELL Health Technologies (sent "transforming administration" →
+sheet "transforming clinical administration").
+
+**Two goal clauses read awkwardly in the template's possessive frame and were left verbatim rather
+than rewritten** (the clause is not ours to re-derive): Moment Energy — "Given Moment Energy's
+focus on doubling **your** Vancouver headquarters and team" (second-person leak inside a
+third-person possessive), and Apple TV — "Given Apple TV's focus on experiencing the best of
+Canada's west coast" (the clause is written from the viewer's perspective, not the org's).
+
+**One name substitution.** Row `Donnelly / Freehouse Collective` — the 7/31 send addressed the org
+as "Freehouse Collective" in both subject and body, so the follow-up body uses that; the tab
+heading keeps the full row name (`Donnelly / Freehouse Collective: Follow Up`) to match the tab's
+existing heading convention.
+
+**Past VSW partners in the batch.** Four rows carry `VSW=TRUE` / `Warm Lead?=TRUE` but sit in
+`Workstream=Cold` with no handoff: Donnelly / Freehouse Collective, Flywheel, Northeastern
+University, WorkSafe BC. Three of them (Flywheel, Northeastern, WorkSafe BC) correctly received
+the re-engagement variant on 7/31; Freehouse Collective received cold copy despite `VSW=TRUE` — a
+pre-existing defect on the original send, not introduced here. The approved follow-up template is
+re-engagement-neutral (it only references the earlier note), so all four were drafted from it
+unchanged.
+
+**Mechanics.** The five fixed paragraphs were lifted **verbatim off the EY Tier 1 tab** rather than
+retyped, so the non-breaking hyphens in "talent‑branding" / "innovation‑focused" and every
+apostrophe are byte-identical to the 7 drafts already approved; only the org name, greeting, date
+and goal clause are substituted. Possessive form follows the playbook rule — apostrophe-only for
+names already ending in "s" (Alumni Ventures', Dapper Labs', Graphite Ventures', Kraken Robotics',
+Nimbus Synergies', Northleaf Capital Partners', WELL Health Technologies', Yaletown Partners').
+Per-tab: one `insertText` of the whole block at index 1, one `updateParagraphStyle` forcing
+`NORMAL_TEXT` across the full inserted range, then `HEADING_1` re-applied to the heading line only
+— the same order used for the Tier 1 batch, chosen because `insertText` otherwise inherits the
+following paragraph's `HEADING_1` style. Tabs were resolved by the `tab=` ID parsed out of each
+row's `Draft Link`, not by title (JPMorgan's tab is titled "JPMorgan Chase" and Freehouse's
+"Freehouse Collective (Donnelly)", so a title match would have missed both). A guard skipped any
+tab whose first paragraph already read `"{Org}: Follow Up"`; none did.
+
+**Verified:** all 44 tabs read back and asserted paragraph-by-paragraph — 14 paragraphs in the
+expected order, correct `namedStyleType` on each (`HEADING_1` on the heading, `NORMAL_TEXT` on all
+13 others), body text matching what was composed, exactly one "Follow Up" heading per tab, and the
+original draft's own `HEADING_1` intact immediately below the block. 44/44 passed, 0 failures.
+
+**Out of scope, flagged not drafted:** the 10 LinkedIn-route Tier 1 orgs sent 7/29 (Accenture,
+AWS, Kensington Capital Partners, KPMG, Rhino Ventures, TD, TELUS Global Ventures, TELUS
+Pollinator Fund, Top Down Ventures, Vancity). Andrew's 2026-07-31 approval covered "the follow-up
+email draft" specifically; a LinkedIn follow-up is new copy and needs its own sign-off.
+
+Temp scripts (`tmp_read_hdr.ts`, `tmp_read_rows.ts`, `tmp_summ.ts`, `tmp_dump_tabs.ts`,
+`tmp_inspect.ts`, `tmp_cmp.ts`, `tmp_t1.ts`, `tmp_write.ts`, `tmp_verify.ts`) run via `npx tsx`
+and deleted, never committed.
+
+## 2026-08-05 — Follow-up template: value-prop and CTA lines revised again, applied to all 51 drafts
+
+Tej revised the same two paragraphs the CTA split touched on 2026-08-04, and supplied the new
+wording as a filled-in Trade and Invest BC draft rather than as a template. Only the two static
+paragraphs changed; the greeting, the "Following up on my note from {{last_touch_date}} about
+{{organization_name}}" line and the "Given {{organization_name}}'s focus on {{goal}}" line are
+untouched, so every per-org placeholder keeps the value already verified for that row.
+
+- Value prop: "We're helping our partners **reach their organizational goals using** our platform
+  for leadership visibility, talent‑branding, and innovation‑focused engagement." →
+  "...**accelerate their initiatives by using** our platform for..."
+- Ask: "...to chat about **how this could work for you?**" → "...to chat about **how our work can
+  help you reach your organizational goals?**"
+
+Net effect: the "organizational goals" framing moves out of the value-prop line and into the ask.
+The new ask text is the same wording the CTA carried before the 2026-08-04 revision, which is now
+non-duplicative because the line above it no longer says it.
+
+**Applied to all 51 existing drafts** — the 7 Tier 1 tabs and the 44 Tier 2/3 tabs — across both
+Outreach Drafts docs. `docs/outreach-copy-playbook.md`'s canonical template updated to match;
+applies to every draft from here on, no per-org re-approval (same standing as the 2026-07-31
+blanket sign-off).
+
+**Method: minimal-span replacement, not paragraph rebuild.** Only the changed substring inside each
+paragraph was deleted and re-inserted (`deleteContentRange` over the exact span, then `insertText`
+at its start), leaving the rest of each paragraph — including the two non-breaking hyphens in
+"talent‑branding" / "innovation‑focused" and the paragraph's own trailing newline — physically
+untouched. The two spans in a tab were emitted **later-span-first** in a single `batchUpdate` so
+the earlier span's indices stayed valid after the first pair applied, avoiding the hand-computed
+index drift that caused a duplicate page break in the SRED.ca work.
+
+**Scoping guard, and why it mattered here.** Replacement was restricted to paragraphs between the
+`"{Org}: Follow Up"` `HEADING_1` and the next `HEADING_1` (the original draft's own heading). This
+was not cosmetic: the *new* CTA string is character-identical to the CTA already sitting in several
+original 7/31 Email A/B bodies further down the same tabs, so an unscoped find-and-replace would
+have been unverifiable — a match could not be attributed to the follow-up block or the original
+draft. Tabs were resolved by the `tab=` ID from each row's `Draft Link`, not by title.
+
+**Verified:** all 51 tabs read back — Follow Up block still exactly 14 paragraphs in order, both
+revised paragraphs matching the new text byte-for-byte (non-breaking hyphens confirmed still
+present), both still `NORMAL_TEXT`, zero occurrences of either old string anywhere in any block,
+and no bold/italic/underline introduced by the re-inserted runs. 51/51 passed, 0 failures.
+
+**Note on send state:** City of Vancouver's follow-up was already sent 2026-08-04 19:52 UTC from
+`community@` (threaded onto the original as "Re: How can Vancouver's tech & innovation ecosystem
+help you reach your goals?"), i.e. it went out carrying the *previous* wording. Its tab now shows
+the revised copy. No other follow-up has been sent yet — confirmed against live Gmail.
+
+**Also caught re-verifying the Tier 1 send addresses:** EY's row lists `Draft Variant`
+"Email A · chair@" and the tab heading agrees, but the actual 2026-07-22 send came from
+`community@`. Flagged to Tej to send the follow-up from `community@` so it threads; the sheet cell
+was not changed. City of Vancouver's original went to both `ced@vancouver.ca` and
+`pbbusinessservices@vancouver.ca`.
+
+Temp scripts (`tmp_t1rows.ts`, `tmp_revise.ts`, `tmp_vfy2.ts`) run via `npx tsx` and deleted,
+never committed.
